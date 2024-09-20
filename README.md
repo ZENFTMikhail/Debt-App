@@ -1,4 +1,6 @@
-![](assets/screenmain.jpg)
+![main](assets/screenmain.jpg)
+![tableDB](assets/screentablebd.jpg)
+![infoclient](assets/screenclient.jpg)
 
 # How to Run the Application
 
