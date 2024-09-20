@@ -30,6 +30,7 @@ Or, using Expo CLI:
 npx expo start
 ```
 Once the server starts, a QR code will appear in your terminal. You can scan this QR code using the Expo Go app on your mobile device to run the application.
+
 **5. Viewing the Application on Mobile**
 
 Android: Open the Expo Go app and use the built-in QR scanner to scan the code from the terminal.
