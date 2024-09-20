@@ -1,3 +1,5 @@
+![](assets/screenmain.jpg)
+
 # How to Run the Application
 
 **1. Clone the Repository**
