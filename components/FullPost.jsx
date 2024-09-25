@@ -4,8 +4,7 @@ import styled from 'styled-components/native';
 import * as SQLite from 'expo-sqlite';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import RNHTMLtoPDF from 'react-native-html-to-pdf';
-import RNFS from 'react-native-fs';
+import { AgreementDate } from './AgreementDate';
 
 
 
@@ -22,6 +21,10 @@ export const FullPost = ({ route }) => {
 
   // Состояния для модального окна и данных
   const [isModalVisible, setModalVisible] = React.useState(false);
+  const [isModalVisibleagreement,setModalVisibleagreement] = React.useState(false);
+  const [deleteuserV, setDeleteuserV] = React.useState(false)
+  
+
   const [pay, setPay] = React.useState(''); // Сумма внесения
   const [days, setDays] = React.useState(''); // Количество дней
   const [paymentDate, setPaymentDate] = React.useState('');
@@ -81,84 +84,7 @@ export const FullPost = ({ route }) => {
     return result;
   };
 
-  const generatePDF = async () => {
-    const htmlContent = `
-      <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              margin: 40px;
-            }
-            h1, h2 {
-              text-align: center;
-              margin-bottom: 20px;
-            }
-            .section {
-              margin-bottom: 20px;
-            }
-            .bold {
-              font-weight: bold;
-            }
-          </style>
-        </head>
-        <body>
-          <h1>Договор займа (обеспечение - залог транспортного средства)</h1>
-          <h2>Барнаул</h2>
-          <h2>«__»___________20___</h2>
-  
-          <div class="section">
-            _______________________________________________________, _________________ г.р., место рождения: ___________________________,
-            паспорт: серия _____ номер ______, выдан ________________________________________________________, дата выдачи: _________ г. 
-            код подразделения _______________, адрес регистрации: ___________________________________________________, именуемый в дальнейшем "Заимодавец", с одной стороны и
-          </div>
-  
-          <div class="section">
-            _______________________________________________________, _________________ г.р., место рождения: ___________________________,
-            паспорт: серия _____ номер ______, выдан ________________________________________________________, дата выдачи: _________ г. 
-            код подразделения_______________, адрес регистрации: ___________________________________________________, именуемый в дальнейшем "Заемщик", с другой стороны, 
-            а вместе именуемые "Стороны", заключили настоящий договор о нижеследующем:
-          </div>
-  
-          <div class="section">
-            <span class="bold">1. Предмет договора</span><br>
-            1.1. По настоящему договору Заимодавец передает в собственность Заемщику денежные средства в размере___________________________ (_______________________________________________) рублей,
-            а Заемщик обязуется возвратить Заимодавцу такую же сумму денег (далее по тексту - заем) в обусловленный настоящим договором срок.<br>
-            1.2. Заем предоставляется на срок до ____________________.<br>
-            1.3. Заем по настоящему договору не является целевым.
-          </div>
-  
-          <div class="section">
-            <span class="bold">2. Порядок возврата займа</span><br>
-            2.1. Заемщик обязуется возвратить сумму займа не позднее «___»_________ 20___ г. в следующем порядке: __________________________.
-          </div>
-        </body>
-      </html>
-    `;
-  
-    let options = {
-      html: htmlContent,
-      fileName: 'dogovor_zaima',
-      directory: 'Documents',
-      width: 595,  // ширина A4
-      height: 842, // высота A4
-    };
-  
-    let file = await RNHTMLtoPDF.convert(options);
-    console.log(file.filePath);
-
-    
-const source = file.filePath;
-const destination = `${RNFS.DownloadDirectoryPath}/dogovor_zaima.pdf`;
-
-try {
-  await RNFS.moveFile(source, destination);
-  console.log('File moved to:', destination);
-} catch (err) {
-  console.log('Error moving file:', err);
-}
-  };
-
+ 
   
 
   const deleteUser = async () => {
@@ -197,50 +123,82 @@ try {
           {imageUris.map((uri, index) => (
             <Image key={index} source={{ uri }} style={{ width: 150, height: 150, margin: 5 }} />
           ))}
+          
         </ScrollView>
         <View style={{paddingBottom: 10, paddingTop: 5}}>
         <Button title="Перерасчет" onPress={() => setModalVisible(true)} />
          </View>   
-        <Button title="Удалить пользователя" onPress={deleteUser} />
+        <Button title="Удалить пользователя" onPress={() => setDeleteuserV(true)} />
         <View  style={{paddingBottom: 10, paddingTop: 10}}>
-      <Button title="Сохранить договор в PDF"  onPress={generatePDF}/>
+      <Button title="Внести данные в договор"  onPress={() => setModalVisibleagreement(true)}/>
+
       </View>
+
+           {/* Модальное окно удаления пользователя */}
+      <Modal visible={deleteuserV} transparent={true}>
+       <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
+         <Text>
+            Вы желаете удалить пользователя?
+         </Text>
+      
+         <View style={styles.buttonContainer}>
+          <View style={styles.buttonWrapper}>
+          <Button title='Да' onPress={deleteUser} />
+          </View>
+           <View style={styles.buttonWrapper}>
+            <Button title='Нет' onPress={() => setDeleteuserV(false)} />
+              </View>
+             </View>
+           </View>
+        </View>
+      </Modal>
+
+          {/* Модальное окно для договора */}
+          <AgreementDate
+        visible={isModalVisibleagreement}
+        onClose={() => setModalVisibleagreement(false)}
+        name={name}
+        procent={procent}
+        dupt={dupt}
+        datedupt={datedupt}
+      />
 
         {/* Модальное окно для перерасчета */}
         <Modal visible={isModalVisible} transparent={true}>
-  <View style={styles.modalContainer}>
-    <View style={styles.modalContent}>
+        <View style={styles.modalContainer}>
+        <View style={styles.modalContent}>
       
-      <TextInput
+        <TextInput
         style={styles.input}
         keyboardType="numeric"
         value={pay}
         onChangeText={setPay}
         placeholder="Сумма платежа"
-      />
+        />
       
-      <TextInput
+        <TextInput
         style={styles.input}
         keyboardType="numeric"
         value={days}
         onChangeText={setDays}
         placeholder="Количество дней"
-      />
+        />
       
-      <TextInput
+        <TextInput
         style={styles.input}
         value={paymentDate}
         onChangeText={setPaymentDate}
         placeholder="Дата платежа(гггг-мм-дд)"
-      />
-      <View style={{paddingBottom: 5}}>
-      <Button title="Рассчитать" onPress={() => recalculation(pay, days, paymentDate)} />
+        />
+       <View style={{paddingBottom: 5}}>
+        <Button title="Рассчитать" onPress={() => recalculation(pay, days, paymentDate)} />
         </View>
       <Button title="Отмена" onPress={() => setModalVisible(false)} />
     </View>
     
-  </View>
-</Modal>
+    </View>
+  </Modal>
       </ContentContainer>
     </GradientContainer>
   );
@@ -265,6 +223,16 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 5,
     marginVertical: 10,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 20, // отступ сверху
+  },
+  buttonWrapper: {
+    flex: 1, // кнопки занимают равное пространство
+    marginHorizontal: 5, // отступы между кнопками
   },
 });
 

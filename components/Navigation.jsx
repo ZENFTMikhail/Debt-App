@@ -34,7 +34,7 @@ export const Navigation = () => {
             <Stack.Navigator>
                 <Stack.Screen name='Home' component={Home} options={{ title: ''}} />
                 <Stack.Screen name='TableDB' component={TableDB} options={{ title: 'Пользователи'}} />
-                <Stack.Screen name='FullPost' component={FullPost} options={{ title: 'Клиент'}} />
+                <Stack.Screen name='FullPost' component={FullPost} options={{ title: 'Карточка клиента'}} />
                 <Stack.Screen name="AddClient" component={AddClientScreen} options={{ title: 'Добавить клиента'}} />
             </Stack.Navigator>
             <Navbar />

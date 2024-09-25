@@ -25,7 +25,19 @@ export const Home = () => {
 
   const allMarkers = { ...markedDates, ...paymentMarkers };
 
-  const handleDayPress = (day) => {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Сортируем даты и берём ближайшую
+  const upcomingPaymentDate = paymentDates
+    .filter(date => date >= today)
+    .sort()[0];  // Берём первую (ближайшую)
+
+  // Ищем пользователя для этой даты
+  const userForUpcomingPayment = userDates[upcomingPaymentDate]?.[0] || 'Неизвестный пользователь';
+
+
+
+const handleDayPress = (day) => {
     const selectedDate = day.dateString;
     const users = userDates[selectedDate];
     
@@ -57,6 +69,11 @@ export const Home = () => {
       <InfoBox>
         <InfoText>Выдано кредитов: {AllCreditMath}</InfoText>
         <InfoText>Всего платежей: {Allpayment}</InfoText>
+      </InfoBox>
+      <InfoBox>
+        <InfoText>
+          Следующий платёж: {userForUpcomingPayment}
+        </InfoText>
       </InfoBox>
 
       <Modal

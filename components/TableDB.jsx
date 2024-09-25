@@ -1,4 +1,4 @@
-import React, {useState, useEffect } from 'react'
+import React, {useState, useEffect, useRef } from 'react'
 import { View, Text,Image, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native'
 import styled from 'styled-components/native';
 import * as SQLite from 'expo-sqlite';
@@ -7,16 +7,47 @@ import ImgUser from '../assets/jpg.png';
 
 
 
+
 export const TableDB =  ({navigation}) => {
+
 
 const [isLoading, setIsLoading] = React.useState(true)
 const [users, setUsers] = React.useState([]);
 
-    
+const db = React.useRef(null);
+
+
+const initDb = async () => {
+    try {
+      // Открытие базы данных
+      db.current = await SQLite.openDatabaseAsync('BD3');
+    } catch (error) {
+      console.error("Error initializing database:", error);
+    }
+  };
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        await initDb(); // Инициализируем базу данных
+        const usersData = await getUsers(); // Получаем пользователей
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setIsLoading(false); // Отключаем индикатор загрузки
+      }
+    };
+
+    fetchData();
+  }, []);
+
+
+
+
   const getUsers = async () => {
     try {
-        const db = await SQLite.openDatabaseAsync('BD3');
-        const result = await db.getAllAsync('SELECT * FROM BD3');
+        const result = await db.current.getAllAsync('SELECT * FROM BD3');
         const usersArray = [];
 
         for (const row of result) {
@@ -32,26 +63,9 @@ const [users, setUsers] = React.useState([]);
     }
 };
 
-
-React.useEffect(() => {
-    const fetchData = async () => {
-        try {
-            const usersData = await getUsers();
-            setUsers(usersData);
-            setIsLoading(true)
-        } catch (error) {
-            console.error("Error fetching users:", error);
-        }
-    };
-
-    fetchData().finally(() => {
-        setIsLoading(false)
-    });
-}, []);
-
 const Update = async () => {
-    const db = await SQLite.openDatabaseAsync('BD3')
-    const result = await db.getAllAsync('SELECT * FROM BD3')
+    
+    const result = await db.current.getAllAsync('SELECT * FROM BD3')
     const usersArray = [];
 
         for (const row of result) {
@@ -100,50 +114,36 @@ flex-direction: row;
 padding-bottom: 10px;
 `
 
-const renderItem = ({ item }) => (
-    <View style={styles.item}>
-
-        <TouchableOpacity onPress={() => navigation.navigate('FullPost', {id: item.id, name: item.name, dupt: item.dupt, payment: item.payment, procent: item.procent, phone: item.phone, datedupt: item.datedupt, datepay: item.datepay, collateral: item.collateral })}>
+const renderItem = React.useCallback(({ item }) => (
+    <TouchableOpacity onPress={() => navigation.navigate('FullPost', {id: item.id, name: item.name, dupt: item.dupt, payment: item.payment, procent: item.procent, phone: item.phone, datedupt: item.datedupt, datepay: item.datepay, collateral: item.collateral })}>
         <PostView>
-         <PostImage source={ImgUser} resizeMode="contain"></PostImage>
-         <View>
-        <PostFullName style={styles.name}>{item.name}</PostFullName>
-        <PostDupt style={styles.dupt}>Сумма: {item.dupt}</PostDupt>
-        <PostPayment style={styles.payment}>Платёж: {item.payment}</PostPayment>
-        <PostPhone style={styles.phone}>Тел: {item.phone}</PostPhone>
-        </View>
+            <PostImage source={ImgUser} resizeMode="contain" />
+            <View>
+                <PostFullName>{item.name}</PostFullName>
+                <PostDupt>Сумма: {item.dupt}</PostDupt>
+                <PostPayment>Платёж: {item.payment}</PostPayment>
+                <PostPhone>Тел: {item.phone}</PostPhone>
+            </View>
         </PostView>
-        </TouchableOpacity>
-    </View>
-);
-
+    </TouchableOpacity>
+), [navigation]);
 
  
        
       
-    if (isLoading) {
-        return (
-
-             
-            <View style={{padding: 10, flex: 1, alignItems: 'center', justifyContent: 'center'}} >
-              <ActivityIndicator size={'large'} />
-              <Text> 
-                Загрузка...
-              </Text>
-             
-                
-            </View>
-        );
-    };
+   
 
     return (
         <View>
-               <FlatList
-               refreshControl={<RefreshControl refreshing={isLoading} onRefresh={Update} />}
-                    data={users}
-                    renderItem={renderItem}
-                    keyExtractor={(item) => item.id} // Используем id как уникальный ключ
-                />
+              <FlatList
+    data={users}
+    renderItem={renderItem}
+    keyExtractor={(item) => item.id.toString()}
+    getItemLayout={(data, index) => (
+        {length: 100, offset: 100 * index, index} // Установи точную высоту элемента
+    )}
+    refreshControl={<RefreshControl refreshing={isLoading} onRefresh={Update} />}
+/>
                 
         </View>
     )
