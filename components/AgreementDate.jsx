@@ -1,7 +1,9 @@
 import React from 'react';
-import { Modal, View, Text, TextInput, Button, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
+import { Modal, View, Text, TextInput, Button, Share, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Alert } from 'react-native';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import RNFS from 'react-native-fs';
+
+
 
 export const AgreementDate = ({ visible, onClose, name, procent, dupt, datedupt }) => {
   const [birthday, setBirthday] = React.useState('');
@@ -449,21 +451,42 @@ export const AgreementDate = ({ visible, onClose, name, procent, dupt, datedupt 
       height: 842, // высота A4
     };
 
-
     let file = await RNHTMLtoPDF.convert(options);
     console.log(file.filePath);
 
     
 const source = file.filePath;
-const destination = `${RNFS.DownloadDirectoryPath}/dogovor_zaima.pdf`;
+
+if (Platform.OS === 'android') {
+
+
+const destination = `${RNFS.DownloadDirectoryPath}/dogovor_zaima${name}.pdf`;
 
 try {
   await RNFS.moveFile(source, destination);
-  console.log('File moved to:', destination);
+  Alert.alert('Файл перемещён в:', destination);
 } catch (err) {
-  console.log('Error moving file:', err);
+  Alert.alert('Error moving file:', err);
 }
+}
+  
+
+if (Platform.OS === 'ios' ) {
+
+  const destination = `${RNFS.DocumentDirectoryPath}/dogovor_zaima${name}.pdf`;
+
+  try {
+    await RNFS.writeFile(source, destination)
+    Alert.alert('Файл перемещён в:', destination);
+  } catch {
+    Alert.alert('Error moving file:', err);
+  }
+}
+
+
   };
+  
+
 
   return (
     <Modal visible={visible} transparent={true} animationType="slide">

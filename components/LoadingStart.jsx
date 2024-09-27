@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Image } from 'react-native';
+import { View, Animated, StyleSheet, Image, StatusBar } from 'react-native';
 import styled from 'styled-components/native';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -14,7 +14,7 @@ export const LoadingStart = () => {
   
 
 
-  useEffect(() => {
+  React.useEffect(() => {
     Animated.timing(dollarTranslateY, {
       toValue: 70,
       duration: 2000, 
@@ -29,7 +29,7 @@ export const LoadingStart = () => {
   `;
  
 const GradientContainer = styled(LinearGradient).attrs({
-  colors: ['#e0f7fa', '#80deea', '#4dd0e1'],
+  colors: ['#6683de', '#80deea', '#6683de'],
   start: { x: 10, y: 10 },
   end: { x: 1, y: 1 },
 })`
@@ -39,6 +39,7 @@ const GradientContainer = styled(LinearGradient).attrs({
   return (
   
       <GradientContainer>   
+         <StatusBar barStyle="light-content" showHideTransition="fade" backgroundColor="#6683de" />
          <Wallet>
      
       <Animated.Image
@@ -54,3 +55,4 @@ const GradientContainer = styled(LinearGradient).attrs({
   );
 };
 
+ 

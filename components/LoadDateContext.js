@@ -10,7 +10,7 @@ export const LoadDateProvider = ({ children }) => {
   const [Allpayment, setAllPayment] = React.useState([]);
   const [userDates, setUserDates] = React.useState({}); // Объект, где каждая дата хранит массив имён
 
-  React.useEffect(() => {
+  
     const fetchData = async () => {
       const db = await SQLite.openDatabaseAsync('BD3');
       
@@ -45,10 +45,10 @@ export const LoadDateProvider = ({ children }) => {
       }
     };
 
-    fetchData();
-  }, []);
+  
+  
 
-  React.useEffect(() => {
+  
     const getAllCredit = async () => {
       try {
         const db = await SQLite.openDatabaseAsync('BD3');
@@ -76,11 +76,16 @@ export const LoadDateProvider = ({ children }) => {
       }
     };
     
-    getAllCredit();
-  }, []);
+    React.useEffect(() =>{
+      fetchData();
+      getAllCredit();
+
+
+    },[])
+  
 
   return (
-    <LoadDateContext.Provider value={{ loadDate, paymentDates, setLoadDate, Allpayment, userDates, AllCredit }}>
+    <LoadDateContext.Provider value={{ loadDate, paymentDates, fetchData, setLoadDate, Allpayment, getAllCredit, userDates, AllCredit }}>
       {children}
     </LoadDateContext.Provider>
   );

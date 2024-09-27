@@ -5,11 +5,18 @@ import { Calendar } from 'react-native-calendars';
 import { LoadDateContext } from './LoadDateContext';
 
 export const Home = () => {
-  const { loadDate, paymentDates, Allpayment, AllCredit, userDates } = useContext(LoadDateContext);
+  const { loadDate, paymentDates, Allpayment, AllCredit, userDates, fetchData, getAllCredit } = useContext(LoadDateContext);
   const AllCreditMath = Math.round(AllCredit);
 
   const [modalVisible, setModalVisible] = useState(false); 
   const [modalContent, setModalContent] = useState('');    
+
+React.useEffect(() =>{
+
+  fetchData();
+  getAllCredit();
+},[])
+
 
   const markedDates = Array.isArray(loadDate) && loadDate.length > 0 
     ? loadDate.reduce((acc, date) => {

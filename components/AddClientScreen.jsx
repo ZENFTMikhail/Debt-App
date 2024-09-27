@@ -3,21 +3,23 @@ import { View, TextInput, Button, StyleSheet, ScrollView, Image, Text } from 're
 import * as SQLite from 'expo-sqlite';
 import { LoadDateContext } from './LoadDateContext';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
-import styled from 'styled-components/native';
+
 
 
 const db =  SQLite.openDatabaseAsync('BD3');
 
 
 export const AddClientScreen = ({navigation}) => {
-  const { setLoadDate } = React.useContext(LoadDateContext);
+  const { setLoadDate, fetchData, getAllCredit } = React.useContext(LoadDateContext);
   const [images, setImages] = React.useState([]);  
   const [name, setName] = React.useState('');
   const [dupt, setDupt] = React.useState('');
   const [procent, setProcent] = React.useState('');
   const [phone, setPhone] = React.useState('');
   const [datedupt, setDateDupt] = React.useState('');
+
+
+  
 
   const calculatePayment = (dupt, procent) => {
     const payment = (dupt * procent) / 100;  
@@ -70,6 +72,8 @@ export const AddClientScreen = ({navigation}) => {
         'INSERT INTO BD3 (name, dupt, payment, procent, phone, datedupt, datepay, collateral) VALUES (?,?,?,?,?,?,?,?)',
         name, dupt, payment, procent, phone, datedupt, nextPaymentDate, collateralValue
       );
+      await fetchData();
+      await getAllCredit();
   
       const result = await db.getAllAsync('SELECT datedupt, datepay FROM BD3');
       if (result.length > 0) {
@@ -122,6 +126,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 10,
   },
+  
   view: {
     paddingTop: 20
   }

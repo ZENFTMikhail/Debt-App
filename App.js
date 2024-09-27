@@ -1,8 +1,10 @@
 
 import { Navigation } from "./components/Navigation";
-
-
+import { registerRootComponent } from 'expo';
 import * as SQLite from 'expo-sqlite';
+
+
+registerRootComponent(App);
 
 const initDb = async () => {
   const db = await SQLite.openDatabaseAsync('BD3');

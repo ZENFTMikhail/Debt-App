@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import { View, Text, Button, StyleSheet, Image, ScrollView, TextInput, Modal, Alert, PermissionsAndroid } from 'react-native';
 import styled from 'styled-components/native';
 import * as SQLite from 'expo-sqlite';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AgreementDate } from './AgreementDate';
+import { LoadDateContext } from './LoadDateContext';
 
 
 
@@ -18,6 +19,7 @@ import { AgreementDate } from './AgreementDate';
 export const FullPost = ({ route }) => {
   const { id, name, dupt, payment, procent, phone, datedupt, datepay, collateral } = route.params;
   const navigation = useNavigation();
+  const {getAllCredit, fetchData} = useContext(LoadDateContext);
 
   // Состояния для модального окна и данных
   const [isModalVisible, setModalVisible] = React.useState(false);
@@ -53,7 +55,8 @@ export const FullPost = ({ route }) => {
     // Преобразование строк в числа
     pay = parseFloat(pay);
     days = parseInt(days);
-  
+    await fetchData();
+    await getAllCredit();
     if (isNaN(pay) || isNaN(days)) {
       alert('Некорректные значения pay или days');
       return;
@@ -75,6 +78,8 @@ export const FullPost = ({ route }) => {
       await db.runAsync('UPDATE BD3 SET dupt = ?, payment = ?, datedupt = ?, datepay = ? WHERE id = ?', 
         [roundedResult, newPayment, paymentDate, nextPaymentDate, id]);
       console.log('Обновленные значения dupt, payment, datedupt, datepay:', roundedResult, newPayment, paymentDate, nextPaymentDate);
+      await fetchData();
+      await getAllCredit();
   
       navigation.goBack(); // Возврат на предыдущий экран
     } catch (error) {
@@ -91,6 +96,8 @@ export const FullPost = ({ route }) => {
     try {
         const db = await SQLite.openDatabaseAsync('BD3');
       const result = await db.getAllAsync('DELETE FROM BD3 WHERE id = ?', [id]);
+      await fetchData();
+      await getAllCredit();
 
       if (result) {
         console.log('User successfully deleted:', result);
