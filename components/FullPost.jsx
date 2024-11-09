@@ -33,10 +33,7 @@ export const FullPost = ({ route }) => {
   const [newDupt, setNewDupt] = React.useState(dupt);
   const [newPayment, setNewPayment] = React.useState(payment);
 
-  React.useEffect(() => {
-    console.log(route.params);
-  }, []);
-
+ 
 
   const calculateNextPaymentDate = (startDate) => {
     const date = new Date(startDate);

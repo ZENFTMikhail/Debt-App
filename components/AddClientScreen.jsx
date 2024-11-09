@@ -1,8 +1,11 @@
 import React from 'react';
-import { View, TextInput, Button, StyleSheet, ScrollView, Image, Text } from 'react-native';
+import { View, TextInput, Button, StyleSheet, ScrollView, Image, Text, TouchableOpacity, Modal, FlatList  } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import { LoadDateContext } from './LoadDateContext';
 import * as ImagePicker from 'expo-image-picker';
+import * as Contacts from 'expo-contacts';
+
+
 
 
 
@@ -18,8 +21,64 @@ export const AddClientScreen = ({navigation}) => {
   const [phone, setPhone] = React.useState('');
   const [datedupt, setDateDupt] = React.useState('');
 
+  const [contacts, setContacts] = React.useState([]);
+  const [filteredContacts, setFilteredContacts] = React.useState([]);
+  const [modalVisible, setModalVisible] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+
 
   
+  const formatPhoneNumber = (phoneNumber) => {
+    // Убираем все нечисловые символы
+    let cleanedNumber = phoneNumber.replace(/\D/g, '');
+
+    // Если номер начинается с 8, заменяем на 7
+    if (cleanedNumber.startsWith('8')) {
+      cleanedNumber = '7' + cleanedNumber.slice(1);
+    }
+
+    return cleanedNumber;
+  };
+
+
+
+
+  React.useEffect(() => {
+    if (modalVisible) {
+      fetchContacts(); // Загружаем контакты, когда открываем модальное окно
+    }
+  }, [modalVisible]);
+
+  const fetchContacts = async () => {
+    const { status } = await Contacts.requestPermissionsAsync();
+    if (status === 'granted') {
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers],
+      });
+      setContacts(data);
+      setFilteredContacts(data); // По умолчанию показываем все контакты
+    }
+  };
+
+
+  const handleSearch = (text) => {
+    setSearch(text);
+    const filtered = contacts.filter(contact => {
+      const contactName = contact.name.toLowerCase();
+      return contactName.includes(text.toLowerCase());
+    });
+    setFilteredContacts(filtered);
+  };
+
+  const handleContactSelect = (contact) => {
+    if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
+      const formattedPhone = formatPhoneNumber(contact.phoneNumbers[0].number)
+      setPhone(formattedPhone); // Берем первый номер
+    }
+    setModalVisible(false); // Закрываем модальное окно после выбора контакта
+  };
+
+
 
   const calculatePayment = (dupt, procent) => {
     const payment = (dupt * procent) / 100;  
@@ -58,6 +117,8 @@ export const AddClientScreen = ({navigation}) => {
     }
   };
 
+ 
+
   const addClient = async (event) => {
     const db = await SQLite.openDatabaseAsync('BD3');
     event.persist();
@@ -94,11 +155,26 @@ export const AddClientScreen = ({navigation}) => {
       <TextInput placeholder="ФИО" value={name} onChangeText={setName} style={styles.input} />
       <TextInput placeholder="Сумма" value={dupt} onChangeText={setDupt} style={styles.input} />
       <TextInput placeholder="Ставка" value={procent} onChangeText={setProcent} style={styles.input} />
-      <TextInput placeholder="Телефон" value={phone} onChangeText={setPhone} style={styles.input} />
+      <View style={styles.inputContainer}>
+        <TextInput
+          placeholder="Телефон"
+          value={phone}
+          onChangeText={setPhone}
+          
+        />
+        <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.iconContainer}>
+          <Image
+            source={require('../assets/contact-icon.png')} // Замени на путь к иконке
+            style={styles.icon}
+          />
+        </TouchableOpacity>
+      </View>
       <TextInput placeholder="Дата займа (гггг-мм-дд)" value={datedupt} onChangeText={setDateDupt} style={styles.input} />
       
       
       <Button title="Фото залога" onPress={pickImages} />
+     
+
       
       <ScrollView horizontal>
         {images.map((imageUri, index) => (
@@ -109,6 +185,31 @@ export const AddClientScreen = ({navigation}) => {
       <Button title="Добавить" onPress={addClient} />
       </View>
       
+
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <TextInput
+            placeholder="Поиск контакта"
+            value={search}
+            onChangeText={handleSearch}
+            style={styles.searchInput}
+          />
+          <FlatList
+            data={filteredContacts}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity style={styles.contactItem} onPress={() => handleContactSelect(item)}>
+                <Text>{item.name}</Text>
+              </TouchableOpacity>
+            )}
+          />
+          <Button title="Закрыть" onPress={() => setModalVisible(false)} />
+        </View>
+      </Modal>
     </ScrollView>
   ); 
 };
@@ -125,6 +226,44 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 10,
     padding: 10,
+  },
+  inputContainer: {
+    flexDirection: 'row', // Размещаем TextInput и кнопку в одном ряду
+    alignItems: 'center',
+    borderColor: 'gray',
+    borderWidth: 1,
+    height: 40,
+    marginBottom: 10,
+    paddingLeft: 7
+
+ 
+   
+  },
+  iconContainer: {
+    position: 'absolute',
+    left: 280 // Отступ слева от края TextInput
+  },
+  icon: {
+    width: 24, // Размер иконки
+    height: 24,
+  },
+  
+  modalContainer: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  searchInput: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 20,
+    paddingLeft: 10,
+  },
+  contactItem: {
+    padding: 10,
+    borderBottomColor: '#ccc',
+    borderBottomWidth: 1,
   },
   
   view: {

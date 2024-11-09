@@ -6,6 +6,28 @@ import * as SQLite from 'expo-sqlite';
 
 registerRootComponent(App);
 
+// const initDbInvest = async () => {
+//   const db = await SQLite.openDatabaseAsync('BDInvest');
+
+//   try {
+//     await db.execAsync(`
+//       PRAGMA journal_mode = WAL;
+//       CREATE TABLE IF NOT EXISTS BDInvest (
+//       id INTEGER PRIMARY KEY NOT NULL,
+//       name TEXT NOT NULL,
+//       dupt INTEGER,
+//       payment INTEGER,
+//       procent INTEGER,
+
+//       )
+
+//       `);
+//   } catch (error) {
+
+//   }
+// };
+
+
 const initDb = async () => {
   const db = await SQLite.openDatabaseAsync('BD3');
   
@@ -30,7 +52,7 @@ const initDb = async () => {
   } catch (error) {
     console.log(error);
   }
-}
+};
 
 initDb();
 

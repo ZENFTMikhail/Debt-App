@@ -8,6 +8,7 @@ import { Navbar } from './Navbar';
 import { Home } from './Home';
 import { AddClientScreen } from './AddClientScreen';
 import { LoadingStart } from './LoadingStart';
+import { Investors } from './Investors';
 import 'react-native-gesture-handler';
 import { LoadDateProvider } from './LoadDateContext';
 
@@ -37,8 +38,9 @@ export const Navigation = () => {
                 <Stack.Screen name='Home' component={Home} options={{ title: 'Календарь платежей'}} />
                 <Stack.Screen name='TableDB' component={TableDB} options={{ title: 'Пользователи'}} />
                 <Stack.Screen name='FullPost' component={FullPost} options={{ title: 'Карточка клиента'}} />
-                <Stack.Screen name="AddClient" component={AddClientScreen} options={{ title: 'Добавить клиента'}} />
-            </Stack.Navigator>
+                <Stack.Screen name='AddClient' component={AddClientScreen} options={{ title: 'Добавить клиента'}} />
+                <Stack.Screen name= 'Investors' component={Investors} options={{title: 'Мои инвесторы'}} />
+            </Stack.Navigator> 
             <Navbar />
         </NavigationContainer>
         </LoadDateProvider>

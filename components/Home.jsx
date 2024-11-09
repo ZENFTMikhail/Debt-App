@@ -1,8 +1,15 @@
 import React, { useState, useContext } from 'react';
-import { View, Text, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Button } from 'react-native';
 import styled from 'styled-components/native';
 import { Calendar } from 'react-native-calendars';
 import { LoadDateContext } from './LoadDateContext';
+import * as Notifications from 'expo-notifications';
+
+
+const { DateTime } = require("luxon");
+
+
+
 
 export const Home = () => {
   const { loadDate, paymentDates, Allpayment, AllCredit, userDates, fetchData, getAllCredit } = useContext(LoadDateContext);
@@ -10,8 +17,27 @@ export const Home = () => {
 
   const [modalVisible, setModalVisible] = useState(false); 
   const [modalContent, setModalContent] = useState('');    
+  const [notificationSent, setNotificationSent] = useState(false); 
+  // const [name, setName] = useState();
+  // const [payment, setPayment] = useState();
+
+
+
+const novosibirskTime = DateTime.now().setZone("Asia/Novosibirsk");
+ 
 
 React.useEffect(() =>{
+
+  const askNotificationPermission = async () => {
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Разрешение на уведомления не предоставлено!');
+      return;
+    }
+   
+  };
+
+  askNotificationPermission();
 
   fetchData();
   getAllCredit();
@@ -40,16 +66,106 @@ React.useEffect(() =>{
     .sort()[0];  // Берём первую (ближайшую)
 
   // Ищем пользователя для этой даты
-  const userForUpcomingPayment = userDates[upcomingPaymentDate]?.[0] || 'Неизвестный пользователь';
+  const userForUpcomingPayment = userDates[upcomingPaymentDate]?.[0]?.name || 'Неизвестный пользователь';
+
+  const scheduleNotification = async ( paymentDate, name, payment) => {
+    const notificationTime = new Date(paymentDate);
+    notificationTime.setHours(12, 9, 0, 0);
+
+    const notificationContent = {
+      title: 'Напоминание о платеже',
+      body: `Сегодня платёж у ${name} сумма ${payment}!`,
+    };
+    
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: notificationContent,
+        trigger: {
+          date: notificationTime,
+          repeats: false,
+        },
+      });
+    } catch (error) {
+      console.error('Ошибка при планировании уведомления:', error);
+    }
+  
+  
+  };
+
+  const sendPushSms = async (phone, name, payment) => {
+
+    const { SmsAero, SmsAeroError, SmsAeroHTTPError } = require('smsaero');
+
+    const client = new SmsAero('seriesmisha777own@gmail.com', 'eG6N2mR_QvlCLKugpnvQ6mndthPRiv7C');
+
+
+    try {
+      const response = await client.send(phone, `Доброго дня, ${name} сегодня платёж по договору! Сумма ${payment} руб.`);
+      console.log(response);
+    } catch (error) {
+      if (error instanceof SmsAeroError) {
+        console.error('Не удалось из-за ошибки SmsAero:', error.message);
+      } else if (error instanceof SmsAeroHTTPError) {
+        console.error('Не удалось из-за HTTP ошибки:', error.message);
+      } else {
+        console.error('Произошла неизвестная ошибка:', error);
+      }
+    }
+};
 
 
 
-const handleDayPress = (day) => {
+
+
+
+
+  React.useEffect(() => {
+    if (notificationSent) return; // Если уведомление уже отправлено, выходим из useEffect
+
+    const today = novosibirskTime.toISODate();
+    const now = novosibirskTime.toLocaleString(DateTime.TIME_24_SIMPLE);
+    
+   
+
+    // Перебираем все даты платежей
+    paymentDates.forEach((paymentDate) => {
+      if (paymentDate === today) {
+        console.log(now);
+        // Найдем пользователей, у которых есть платеж на эту дату
+        const users = userDates[paymentDate] || [];
+        users.forEach(user => {
+
+          const {phone, name, payment} = user;
+
+          
+         
+          
+
+          if (now === '12:26') {
+            console.log(user.name)
+          }
+
+          scheduleNotification(paymentDate, user.name, user.payment);
+         
+        });
+
+        // Устанавливаем флаг, что уведомление отправлено
+        setNotificationSent(true);
+      }
+    });
+  }, [paymentDates, userDates, notificationSent]);
+ 
+
+  const handleDayPress = (day) => {
     const selectedDate = day.dateString;
     const users = userDates[selectedDate];
     
     if (users && users.length > 0) {
-      setModalContent(`Клиент: ${users.join(', ')}`);  
+      // Формируем содержимое модального окна с именем и платежами
+      const modalText = users
+        .map(user => `Клиент: ${user.name}, Платёж: ${user.payment}`)
+        .join('\n');
+      setModalContent(modalText);  
     } else {
       setModalContent('Нет данных для этой даты');
     }
@@ -70,6 +186,7 @@ const handleDayPress = (day) => {
             selectedDayBackgroundColor: '#00adf5',
             selectedDayTextColor: '#ffffff',
           }}
+          style={{borderWidth: 2, borderRadius: 15, borderColor: '#3A4A7D', height: 320 }}
         />
       </CalendarContainer>
       
@@ -80,7 +197,10 @@ const handleDayPress = (day) => {
       <InfoBox>
         <InfoText>
           Следующий платёж: {userForUpcomingPayment}
+          
         </InfoText>
+       
+       
       </InfoBox>
 
       <Modal
@@ -93,7 +213,7 @@ const handleDayPress = (day) => {
           <ModalContent>
             <ModalText>{modalContent}</ModalText>
             <CloseButton onPress={() => setModalVisible(false)}>
-              <CloseButtonText>Закрыть</CloseButtonText>
+              <CloseButtonText>Закрыть </CloseButtonText>
             </CloseButton>
           </ModalContent>
         </ModalOverlay>
@@ -120,7 +240,9 @@ const InfoBox = styled.View`
   padding: 20px;
   border-radius: 10px;
   margin-bottom: 20px;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+  border-width: 2px;
+  border-color: #3A4A7D;
+ 
 `;
 
 const InfoText = styled.Text`
@@ -159,6 +281,8 @@ const CloseButton = styled.TouchableOpacity`
   padding: 10px 20px;
   border-radius: 5px;
 `;
+
+
 
 const CloseButtonText = styled.Text`
   color: white;

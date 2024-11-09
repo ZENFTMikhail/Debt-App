@@ -44,7 +44,7 @@ if (getRNMinorVersion() >= 75) {
   }
 }
 
-rootProject.name = 'StickerSmash'
+rootProject.name = 'DBdupt'
 
 dependencyResolutionManagement {
   versionCatalogs {
