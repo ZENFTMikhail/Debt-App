@@ -33,7 +33,6 @@ export const FullPost = ({ route }) => {
   const [newDupt, setNewDupt] = React.useState(dupt);
   const [newPayment, setNewPayment] = React.useState(payment);
 
- 
 
   const calculateNextPaymentDate = (startDate) => {
     const date = new Date(startDate);
@@ -45,49 +44,80 @@ export const FullPost = ({ route }) => {
     return date.toISOString().split('T')[0];  
   };
 
-
-  const recalculation = async (pay, days, paymentDate) => {
+  const recalculation = async (pay) => {
     const db = await SQLite.openDatabaseAsync('BD3');
-  
-    // Преобразование строк в числа
-    pay = parseFloat(pay);
-    days = parseInt(days);
-    await fetchData();
-    await getAllCredit();
-    if (isNaN(pay) || isNaN(days)) {
-      alert('Некорректные значения pay или days');
-      return;
-    }
-  
-    const dayprocent = procent / 30;
-    const procentDayresult = dayprocent * days;
-    const paymentinallDay = (procentDayresult * dupt) / 100;
-    const result = (dupt + paymentinallDay) - pay;
-    const newPaymentcalc = (result * procent) / 100;
-    const roundedResult = Math.round(result);
-    const newPayment = Math.round(newPaymentcalc);
-  
-    // Рассчитываем следующую дату платежа
-    const nextPaymentDate = calculateNextPaymentDate(paymentDate);
-  
-    try {
-      // Обновляем dupt, payment, дату займа и дату следующего платежа в базе данных
-      await db.runAsync('UPDATE BD3 SET dupt = ?, payment = ?, datedupt = ?, datepay = ? WHERE id = ?', 
-        [roundedResult, newPayment, paymentDate, nextPaymentDate, id]);
-      console.log('Обновленные значения dupt, payment, datedupt, datepay:', roundedResult, newPayment, paymentDate, nextPaymentDate);
-      await fetchData();
-      await getAllCredit();
-  
-      navigation.goBack(); // Возврат на предыдущий экран
-    } catch (error) {
-      console.error('Ошибка при обновлении базы данных:', error);
-    }
-  
-    return result;
-  };
+    const today = new Date();
+    const todayDateStr = today.toISOString().split('T')[0];
+    console.log(todayDateStr);
 
- 
-  
+    const startDate = new Date(datedupt);
+    const days = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)); // Сколько дней прошло
+    console.log('Days since last payment:', days);
+
+    pay = parseFloat(pay);
+    if (isNaN(pay)) {
+        alert('Некорректное значение оплаты (pay)');
+        return;
+    }
+
+    const daysIsMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate(); // Дней в текущем месяце
+    console.log('Days in current month:', daysIsMonth);
+
+    const dayprocent = procent / daysIsMonth; // Процент в день
+    console.log('Daily percentage rate:', dayprocent);
+
+    let updatedDebt = dupt; // Изначальный долг
+    let interestForDays = 0;
+
+    if (days > daysIsMonth) {
+        // Если прошло больше 30/31 дня, добавляем платёж как часть долга и пересчитываем
+        updatedDebt += (dupt * procent / 100); // Сумма долга с процентами за предыдущий месяц
+        interestForDays = (updatedDebt * dayprocent * (days - daysIsMonth)) / 100; // Проценты за просроченные дни
+        console.log('Interest for overdue days:', interestForDays);
+    } else {
+        // Процент за прошедшие дни в пределах месяца
+        interestForDays = (updatedDebt * dayprocent * days) / 100;
+    } 
+
+    const totalWithInterest = updatedDebt + interestForDays; // Новый долг с учётом процентов
+    console.log('Total debt with interest:', totalWithInterest);
+
+    // Учитываем оплату и рассчитываем оставшийся долг
+    const remainingDebt = totalWithInterest - pay;
+    console.log('Remaining debt after payment:', remainingDebt);
+
+    // Рассчитываем новый платёж на основе оставшегося долга
+    const newPaymentCalc = (remainingDebt * procent) / 100; // Новый ежемесячный платёж
+    const roundedRemainingDebt = Math.round(remainingDebt);
+    const roundedNewPayment = Math.round(newPaymentCalc);
+
+    // Рассчитываем следующую дату платежа
+    const nextPaymentDate = calculateNextPaymentDate(todayDateStr);
+
+    try {
+        // Обновляем данные в базе
+        await db.runAsync(
+            'UPDATE BD3 SET dupt = ?, payment = ?, datedupt = ?, datepay = ? WHERE id = ?',
+            [roundedRemainingDebt, roundedNewPayment, todayDateStr, nextPaymentDate, id]
+        );
+        console.log(
+            'Обновленные значения:',
+            roundedRemainingDebt,
+            roundedNewPayment,
+            todayDateStr,
+            nextPaymentDate
+        );
+
+        // Обновление данных и возврат на предыдущий экран
+        await fetchData();
+        await getAllCredit();
+        navigation.goBack();
+    } catch (error) {
+        console.error('Ошибка при обновлении базы данных:', error);
+    }
+
+    return roundedRemainingDebt; // Возвращаем новый долг
+};
 
   const deleteUser = async () => {
     try {
@@ -104,6 +134,9 @@ export const FullPost = ({ route }) => {
       console.error('Failed to delete user:', error);
     }
   };
+
+
+
 
   const imageUris = collateral ? collateral.split(',') : [];
 
@@ -129,13 +162,14 @@ export const FullPost = ({ route }) => {
           ))}
           
         </ScrollView>
-        <View style={{paddingBottom: 10, paddingTop: 5}}>
-        <Button title="Перерасчет" onPress={() => setModalVisible(true)} />
+        <View style={{paddingBottom: 2, paddingTop: 5}}>
+        <Button title="Внести платёж" color="#007AFF" onPress={() => setModalVisible(true)} />
          </View>   
-        <Button title="Удалить пользователя" onPress={() => setDeleteuserV(true)} />
-        <View  style={{paddingBottom: 10, paddingTop: 10}}>
-      <Button title="Внести данные в договор"  onPress={() => setModalVisibleagreement(true)}/>
-
+        <View  style={{paddingBottom: 2, paddingTop: 10}}>
+      <Button title="Внести данные в договор" color="#007AFF"  onPress={() => setModalVisibleagreement(true)}/>
+      </View>
+      <View  style={{paddingBottom: 5, paddingTop: 10}}>
+      <Button title="Удалить пользователя" color="#007AFF" onPress={() => setDeleteuserV(true)} />
       </View>
 
            {/* Модальное окно удаления пользователя */}
@@ -148,10 +182,10 @@ export const FullPost = ({ route }) => {
       
          <View style={styles.buttonContainer}>
           <View style={styles.buttonWrapper}>
-          <Button title='Да' onPress={deleteUser} />
+          <Button title='Да' color="#FF0000" onPress={deleteUser} />
           </View>
            <View style={styles.buttonWrapper}>
-            <Button title='Нет' onPress={() => setDeleteuserV(false)} />
+            <Button title='Нет' color="#007AFF" onPress={() => setDeleteuserV(false)} />
               </View>
              </View>
            </View>
@@ -181,24 +215,10 @@ export const FullPost = ({ route }) => {
         placeholder="Сумма платежа"
         />
       
-        <TextInput
-        style={styles.input}
-        keyboardType="numeric"
-        value={days}
-        onChangeText={setDays}
-        placeholder="Количество дней"
-        />
-      
-        <TextInput
-        style={styles.input}
-        value={paymentDate}
-        onChangeText={setPaymentDate}
-        placeholder="Дата платежа(гггг-мм-дд)"
-        />
        <View style={{paddingBottom: 5}}>
-        <Button title="Рассчитать" onPress={() => recalculation(pay, days, paymentDate)} />
+        <Button title="Рассчитать" color="#007AFF" onPress={() => recalculation(pay)} />
         </View>
-      <Button title="Отмена" onPress={() => setModalVisible(false)} />
+      <Button title=" Отмена " color="#007AFF" onPress={() => setModalVisible(false)} />
     </View>
     
     </View>
@@ -223,7 +243,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   input: {
-    borderBottomWidth: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    textAlign: 'center',
     width: '100%',
     padding: 5,
     marginVertical: 10,
@@ -252,7 +274,7 @@ const GradientContainer = styled(LinearGradient).attrs({
 `;
 
 const ContentContainer = styled.View`
-    background-color: rgba(255, 255, 255, 0.8);
+    background-color: rgba(255, 255, 255, 0.7);
     padding: 10px;
     border-radius: 10px;
     box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);

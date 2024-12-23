@@ -525,10 +525,10 @@ if (Platform.OS === 'ios' ) {
 
 
           <View style={{ marginBottom: 10 }}>
-            <Button title="Сохранить договор в PDF" onPress={() => generatePDF()} />
+            <Button title="Сохранить договор в PDF" color="#007AFF" onPress={() => generatePDF()} />
           </View>
 
-          <Button title="Отмена" onPress={onClose} />
+          <Button title="Отмена" color="#007AFF" onPress={onClose} />
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>

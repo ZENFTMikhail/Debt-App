@@ -38,13 +38,14 @@ const SidebarContainer = styled(Animated.View)`
 `;
 
 const SidebarItem = styled(TouchableOpacity)`
-  padding: 10px 0;
+  
   margin-bottom: 5px;
   margin-top: 10px;
 `;
 
 const SidebarImg = styled.View`
   flex-direction: row;
+  padding-bottom: 10px;
 `;
 
 export const Navbar = () => {
@@ -85,11 +86,6 @@ export const Navbar = () => {
             <Image source={require('../assets/main2.png')} />
           </NavImage>
         </TouchableOpacity>
-        {/* <TouchableOpacity onPress={() => navigation.navigate('TableDB')}>
-          <NavImage>
-            <Image source={require('../assets/users.png')} />
-          </NavImage>
-        </TouchableOpacity> */}
         <TouchableOpacity onPress={() => navigation.navigate('AddClient')}>
           <NavImage style={{ paddingTop: 2 }}>
             <Image source={require('../assets/add.png')} />
@@ -114,9 +110,15 @@ export const Navbar = () => {
           </SidebarItem>
           <SidebarItem  onPress={() =>  {navigation.navigate('TableDB'); closeSidebar();}}>
           <SidebarImg>
-            <Image source={require('../assets/users.png')} style={{ marginRight: 5, width: 25, height: 30}}  />
+            <Image source={require('../assets/users.png')} style={{ marginRight: 5, width: 25, height: 25}}  />
             <Text style={{ color: '#fff', fontSize: 18 }}>Мои клиенты</Text>
             </SidebarImg>
+          </SidebarItem>
+          <SidebarItem  onPress={() =>  {navigation.navigate('Note'); closeSidebar();}}>
+          <SidebarImg>
+          <Image source={require('../assets/Note.png')} style={{ marginRight: 5, width: 25, height: 25}}  />
+          <Text style={{ color: '#fff', fontSize: 18 }}>Заметки</Text>
+          </SidebarImg>
           </SidebarItem>
         </SidebarContainer>
       )}

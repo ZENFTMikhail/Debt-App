@@ -152,14 +152,16 @@ export const AddClientScreen = ({navigation}) => {
   
   return (
     <ScrollView style={styles.container}>
-      <TextInput placeholder="ФИО" value={name} onChangeText={setName} style={styles.input} />
-      <TextInput placeholder="Сумма" value={dupt} onChangeText={setDupt} style={styles.input} />
-      <TextInput placeholder="Ставка" value={procent} onChangeText={setProcent} style={styles.input} />
+      <TextInput placeholder="ФИО" value={name} onChangeText={setName}  style={styles.input} />
+      <TextInput placeholder="Сумма" value={dupt} onChangeText={setDupt} keyboardType='numeric' style={styles.input} />
+      <TextInput placeholder="Ставка" value={procent} onChangeText={setProcent} keyboardType='numeric' style={styles.input} />
       <View style={styles.inputContainer}>
         <TextInput
-          placeholder="Телефон"
+          placeholder="Телефон-7***"
           value={phone}
           onChangeText={setPhone}
+          keyboardType='numeric'
+          
           
         />
         <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.iconContainer}>
@@ -169,10 +171,10 @@ export const AddClientScreen = ({navigation}) => {
           />
         </TouchableOpacity>
       </View>
-      <TextInput placeholder="Дата займа (гггг-мм-дд)" value={datedupt} onChangeText={setDateDupt} style={styles.input} />
+      <TextInput placeholder="Дата займа (гггг-мм-дд)" value={datedupt.trim()} keyboardType='numeric' onChangeText={setDateDupt} style={styles.input} />
       
       
-      <Button title="Фото залога" onPress={pickImages} />
+      <Button title="Фото залога" color="#007AFF" onPress={pickImages} />
      
 
       
@@ -182,7 +184,7 @@ export const AddClientScreen = ({navigation}) => {
         ))}
       </ScrollView>
       <View style={{paddingTop: 10}}>
-      <Button title="Добавить" onPress={addClient} />
+      <Button title="Добавить" color="#007AFF" onPress={addClient} />
       </View>
       
 

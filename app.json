@@ -21,14 +21,31 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mika77712.StickerSmash"
+      "bundleIdentifier": "com.mika77712.StickerSmash",
+      "infoPlist": {
+        "NSContactsUsageDescription": "This app requires access to your contacts to allow you to select and share them.",
+        "NSCameraUsageDescription": "This app requires access to the camera to allow you to take photos.",
+        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to allow you to pick and upload images.",
+        "NSPhotoLibraryAddUsageDescription": "This app needs permission to save images to your photo library.",
+        "NSUserTrackingUsageDescription": "This app collects data to improve user experience and deliver personalized content.",
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.mika77712.StickerSmash"
+      "package": "com.mika77712.StickerSmash",
+      "permissions": [
+        "READ_CONTACTS",
+        "WRITE_CONTACTS",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "FOREGROUND_SERVICE",
+        "WAKE_LOCK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
