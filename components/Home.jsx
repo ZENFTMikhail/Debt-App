@@ -1,11 +1,106 @@
 import React from 'react';
-import { View, Text, Modal, TouchableOpacity, Button, Alert} from 'react-native';
+import { View, Text, Modal, TouchableOpacity, Button, Alert, Platform} from 'react-native';
 import styled from 'styled-components/native';
 import { Calendar } from 'react-native-calendars';
 import { LoadDateContext } from './LoadDateContext';
 import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import * as SQLite from 'expo-sqlite';
+import CustomButton from './CustomButton';
 
+
+
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
+
+Notifications.setBadgeCountAsync(0);
+
+
+async function sendPushNotification(expoPushToken) {
+  const message = {
+    to: expoPushToken,
+    sound: 'default',
+    title: 'Original Title',
+    body: 'And here is the body!',
+    data: { someData: 'goes here' },
+    
+  };
+
+  try {
+    const response = await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message),
+    });
+    const data = await response.json();
+    console.log('Push Notification Response:', data);
+    Alert.alert('Notification Sent', 'Push notification has been sent successfully!');
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    Alert.alert('Error', 'Failed to send push notification.');
+  }
+}
+
+async function registerForPushNotificationsAsync() {
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+  
+
+  if (Device.isDevice) {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      Alert.alert('Error', 'Permission not granted for push notifications.');
+      return null;
+    }
+
+    const projectId =
+      Constants?.expoConfig?.extra?.eas?.projectId || Constants?.easConfig?.projectId;
+
+    if (!projectId) {
+      Alert.alert('Error', 'Project ID not found.');
+      return null;
+    }
+
+    try {
+      const pushToken = (
+        await Notifications.getExpoPushTokenAsync({ projectId })
+      ).data;
+      console.log('Expo Push Token:', pushToken);
+      return pushToken;
+    } catch (error) {
+      console.error('Error getting push token:', error);
+      Alert.alert('Error', 'Failed to get push token.');
+      return null;
+    }
+  } else {
+    Alert.alert('Error', 'Must use a physical device for push notifications.');
+    return null;
+  }
+}
 
 
 
@@ -16,6 +111,10 @@ export const Home = () => {
 
   const [modalVisible, setModalVisible] = React.useState(false); 
   const [modalContent, setModalContent] = React.useState('');    
+  const [expoPushToken, setExpoPushToken] = React.useState('');
+  const [notification, setNotification] = React.useState(null);
+  const notificationListener = React.useRef();
+  const responseListener = React.useRef();
 
   const [paymentClients,setPaymentClient] = React.useState([]);
  
@@ -25,315 +124,95 @@ export const Home = () => {
   const novosibirskTime = DateTime.now().setZone("Asia/Novosibirsk");
   const today = novosibirskTime.toISODate();
   const now = novosibirskTime.toLocaleString(DateTime.TIME_24_SIMPLE);
- 
-
-React.useEffect(() =>{
-
-  const askNotificationPermission = async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Разрешение на уведомления не предоставлено!');
-      return;
-    }
-   
-  };
-
-  askNotificationPermission();
-
-  fetchData();
-  getAllCredit();
-},[])
-
-// Функция для планирования уведомлений для клиентов
-const schedulePaymentNotificationClient = async (date, clientName, clientPay, id) => {
-  const now = new Date();
-  const paymentDate = new Date(date);
-
-  if (paymentDate <= now) return; // Не планируем уведомления на прошедшие даты
-
-  const secondsUntilPayment = Math.floor((paymentDate - now) / 1000);
-
-  try {
-    // Создаем уведомление с уникальным идентификатором
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Клиент',
-        body: `Сегодня платёж у ${clientName} сумма ${clientPay} руб.`,
-      },
-      trigger: { seconds: secondsUntilPayment, repeats: false },
-      identifier: `client-${id}`, // Уникальный идентификатор для уведомлений клиентов
-    });
-
-    console.log(`Уведомление для клиента ${clientName} запланировано через ${secondsUntilPayment} секунд.`);
-  } catch (error) {
-    console.log('Ошибка при планировании уведомления для клиента:', error);
-  }
-};
-
-// Функция для планирования уведомлений для инвесторов
-const schedulePaymentNotificationInvestor = async (date, investName, investPay, id) => {
-  const now = new Date();
-  const paymentDate = new Date(date);
-
-  if (paymentDate <= now) return;
-
-  const secondsUntilPayment = Math.floor((paymentDate - now) / 1000);
-
-  try {
-    // Создаем уведомление с уникальным идентификатором
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: 'Инвестор',
-        body: `Сегодня платёж у ${investName} сумма ${investPay} руб.`,
-      },
-      trigger: { seconds: secondsUntilPayment, repeats: false },
-      identifier: `investor-${id}`, // Уникальный идентификатор для уведомлений инвесторов
-    });
-
-    console.log(`Уведомление для инвестора ${investName} запланировано через ${secondsUntilPayment} секунд.`);
-  } catch (error) {
-    console.log('Ошибка при планировании уведомления для инвестора:', error);
-  }
-};
-
-// Функция для отмены уведомлений для клиентов
-const cancelClientNotifications = async () => {
-  try {
-    // Отменяем все уведомления, связанные с клиентами
-    const notifications = await Notifications.getAllScheduledNotificationsAsync();
-    const clientNotifications = notifications.filter(notification =>
-      notification.identifier.startsWith('client-') // Отбираем только уведомления для клиентов
-    );
-
-    for (const notification of clientNotifications) {
-      await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-      console.log(`Отменено уведомление для клиента: ${notification.identifier}`);
-    }
-  } catch (error) {
-    console.error('Ошибка при отмене уведомлений для клиентов:', error);
-  }
-};
-
-// Функция для отмены уведомлений для инвесторов
-const cancelInvestorNotifications = async () => {
-  try {
-    // Отменяем все уведомления, связанные с инвесторами
-    const notifications = await Notifications.getAllScheduledNotificationsAsync();
-    const investorNotifications = notifications.filter(notification =>
-      notification.identifier.startsWith('investor-') // Отбираем только уведомления для инвесторов
-    );
-
-    for (const notification of investorNotifications) {
-      await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-      console.log(`Отменено уведомление для инвестора: ${notification.identifier}`);
-    }
-  } catch (error) {
-    console.error('Ошибка при отмене уведомлений для инвесторов:', error);
-  }
-};
-
-// Основной useEffect для обновления уведомлений
-React.useEffect(() => {
-  const UpdNotification = async () => {
-    try {
-      // Открываем базу данных для клиентов
-      const dbclient = await SQLite.openDatabaseAsync('BD3');
-      const result = await dbclient.getAllAsync('SELECT * FROM BD3');
-      const usersClient = result.map(row => ({
-        ...row,
-        datepay: new Date(row.datepay),
-      }));
-
-      const sortClient = usersClient.sort((a, b) => a.datepay - b.datepay);
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      const nextWeek = new Date();
-      nextWeek.setDate(now.getDate() + 7);
-      const twoDays = new Date();
-      twoDays.setDate(now.getDate() + 2);
-      // Отменяем старые уведомления для клиентов
-      await cancelClientNotifications();
-
-      const upcomingPayments = sortClient.filter(client => client.datepay > now && client.datepay < nextWeek);
-      const todayPaymentsClients = usersClient.filter(client => {
-        const clientDate = new Date(client.datepay).toISOString().split('T')[0]; // Преобразуем client.datepay в строку
-        return clientDate === today;
-      });     
-            setPaymentClient(todayPaymentsClients);
-
-      if (upcomingPayments.length > 0) {
-        for (const payment of upcomingPayments) {
-          const { datepay, name, payment: clientPay, id } = payment;
-          const paymentDateWithTime = new Date(datepay);
-          paymentDateWithTime.setHours(12, 0, 0, 0); // Устанавливаем время на 12:00
-          
-         
 
 
-          // Планируем уведомление для каждого клиента
-          await schedulePaymentNotificationClient(paymentDateWithTime, name, clientPay, id);
-          console.log(`Уведомление для клиента ${name} запланировано на ${paymentDateWithTime}`);
-        }
-      } else {
-        console.log('Нет предстоящих платежей у клиентов.');
-      } 
-      // Открываем базу данных для инвесторов
-      const dbinvest = await SQLite.openDatabaseAsync('BDInvest1');
-      const resultInvest = await dbinvest.getAllAsync('SELECT * FROM BDInvest1');
-      const usersInvest = resultInvest.map(row => ({
-        ...row,
-        datepay: new Date(row.datepay),
-      }));
+  React.useEffect(() => {
 
-      const sortInvest = usersInvest.sort((a, b) => a.datepay - b.datepay);
-      const nextPaymentInvestor = sortInvest.find(invest => invest.datepay > now);
-
-      // Отменяем старые уведомления для инвесторов
-      await cancelInvestorNotifications();
-      
-
-
-      // Планируем уведомление для следующего инвестора
-      if (nextPaymentInvestor) {
-        const { datepay, name, payment, id } = nextPaymentInvestor;
-        const paymentDateWithTime = new Date(datepay);
-        paymentDateWithTime.setHours(11, 0, 0, 0);
-
-        await schedulePaymentNotificationInvestor(paymentDateWithTime, name, payment, id);
-        console.log(`Уведомление для инвестора ${name} запланировано на ${paymentDateWithTime}`);
-      } else {
-        console.log('Нет предстоящих платежей у инвесторов.');
-      }
-    } catch (error) {
-      console.error('Ошибка при обновлении уведомлений:', error);
-    }
-  };
-
-  UpdNotification();
+    setTimeout(() => { const allData = async () => {
+      const db = await SQLite.openDatabaseAsync('BDuser3');
+      const result = await db.getAllAsync('SELECT name, datepay, phone, payment FROM BDuser3');
   
- 
-}, []);
-
-React.useEffect(() => {
-  if (paymentClients.length > 0) {
-    checkAndSendSms();
-    console.log('Вызов checkAndSendSms после обновления состояния paymentClients');
-  } else {
-    console.log('paymentClients пустой, SMS не отправляется');
-  }
-}, [paymentClients]);
-
-const checkAndSendSms = async () => {
-  let db; // Переменная для базы данных
-  try {
-    // Получаем текущую дату в UTC
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0); // Сбрасываем время до 00:00:00 UTC
-
-    console.log('Сегодняшняя дата (UTC):', today.toISOString());
-
-    // Фильтруем пользователей с платежами на сегодня
-    const todayPayments = paymentClients.filter(payment => {
-      const paymentDate = new Date(payment.datepay);
-      paymentDate.setUTCHours(0, 0, 0, 0); // Сбрасываем время платежной даты до 00:00:00 UTC
-
-      console.log(`Проверка клиента: ${payment.name}, дата платежа: ${paymentDate.toISOString()}`);
-
-      return paymentDate.getTime() === today.getTime();
-    });
-
-    console.log('Платежи на сегодня:', todayPayments);
-  
-
-    if (todayPayments.length === 0) {
-      console.log('На сегодня платежей нет.');
-      return;
-    }
-
-    // Открываем базу данных
-    db = await SQLite.openDatabaseAsync('dataSMS');
-
-    // Очистка старых записей
-    await cleanOldSmsRecords(db);
-
-    // Получаем уже отправленные SMS
-    const existingSmsRecords = await db.getAllAsync('SELECT name FROM dataSMS WHERE status = "sent"');
-    const sentNames = existingSmsRecords.map(record => record.name);
-
-    // Отправляем SMS и записываем в базу
-    for (const payment of todayPayments) {
-      const { name, phone, payment: amount } = payment;
-
-      if (!sentNames.includes(name)) {
+      if (result.length > 0) {
         try {
-          await sendPushSms(phone, name, amount);
-          await markSmsAsSent(db, name);
+          const response = await fetch('https://db-dupt-f3417235da6c.herokuapp.com/api/save-users', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ users: result }),
+          });
+  
+          const data = await JSON.parse(JSON.stringify(response));
+          console.log('Отправлено на сервер BDuser3', data);
         } catch (error) {
-          console.error(`Ошибка при отправке SMS для ${name}:`, error);
+          console.log('Ошибка отправки данных', error);
         }
-      } else {
-        console.log(`SMS для ${name} уже отправлено.`);
       }
-    }
-  } catch (error) {
-    console.error('Ошибка в checkAndSendSms:', error);
-  } finally {
-    if (db) {
-      await db.closeAsync();
-      console.log('База данных закрыта.');
-    }
-  }
-};
+    };
+  
+    allData();}, 9000)
+   
+  }, []);
 
+  React.useEffect(() => {
 
-
-const markSmsAsSent = async (db, name) => {
-  try {
-    const currentDate = new Date().toISOString();
-    await db.runAsync('INSERT INTO dataSMS (name, status, date) VALUES (?, ?, ?);', [name, 'sent', currentDate]);
-    console.log(`Запись для ${name} добавлена в базу.`);
-  } catch (error) {
-    console.error(`Ошибка при добавлении sads записи для ${name}:`, error);
-  }
-};
-
-const cleanOldSmsRecords = async (db) => {
-  try {
-    const twoDaysAgo = new Date();
-    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
-    const twoDaysAgoISO = twoDaysAgo.toISOString();
-
-    await db.runAsync('DELETE FROM dataSMS WHERE date < ?;', [twoDaysAgoISO]);
-    console.log('Старые записи удалены из базы.');
-  } catch (error) {
-    console.error('Ошибка при очистке старых записей:', error);
-  }
-};
-
-
-const sendPushSms = async (phone, name, payment) => {
-
-  const { SmsAero, SmsAeroError, SmsAeroHTTPError } = require('smsaero');
-
-  const client = new SmsAero('seriesmisha777own@gmail.com', 'eG6N2mR_QvlCLKugpnvQ6mndthPRiv7C');
-
-
-  try {
-    const response = await client.send(phone, `Доброго дня, ${name} сегодня платёж по договору! Сумма ${payment} руб.`);
+    setTimeout(() => {const allDataInvest = async () => {
+      const db = await SQLite.openDatabaseAsync('BDInvest1');
+      const result = await db.getAllAsync('SELECT name, datepay, payment FROM BDInvest1');
+  
+      if (result.length > 0) {
+        try {
+          const response = await fetch('https://db-dupt-f3417235da6c.herokuapp.com/api/save-invest', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ invest: result }),
+          });
+  
+          const data = await JSON.parse(JSON.stringify(response));
+          console.log('Отправлено на сервер', data);
+        } catch (error) {
+          console.log('Ошибка отправки данных BDinvest', error);
+        }
+      }
+    };
+  
+    allDataInvest();}, 8000)
     
-    console.log(response);
-  } catch (error) {
-    if (error instanceof SmsAeroError) {
-      console.error('Не удалось из-за ошибки SmsAero:', error.message);
-    } else if (error instanceof SmsAeroHTTPError) {
-      console.error('Не удалось из-за HTTP ошибки:', error.message);
-    } else {
-      console.error('Произошла неизвестная ошибка:', error);
+  }, []);
+
+  
+React.useEffect(() => {
+  fetch('https://db-dupt-f3417235da6c.herokuapp.com/api/ping');
+  console.log('Отправлено');
+})
+
+  
+
+
+React.useEffect(() => {
+  registerForPushNotificationsAsync()
+    .then(token => setExpoPushToken(token || ''))
+    .catch(error => console.error('Error during registration:', error));
+
+  notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+    setNotification(notification);
+  });
+
+  responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+    console.log('Notification response:', response);
+  });
+
+  return () => {
+    if (notificationListener.current) {
+      Notifications.removeNotificationSubscription(notificationListener.current);
     }
-  }
-};
-
-
+    if (responseListener.current) {
+      Notifications.removeNotificationSubscription(responseListener.current);
+    }
+  };
+}, []);
 
 
 
@@ -353,15 +232,15 @@ const sendPushSms = async (phone, name, payment) => {
 
   const allMarkers = { ...markedDates, ...paymentMarkers };
 
-
   // Сортируем даты и берём ближайшую
   const upcomingPaymentDate = paymentDates
     .filter(date => date >= today)
     .sort()[0];  // Берём первую (ближайшую)
 
   // Ищем пользователя для этой даты
-  const userForUpcomingPayment = userDates[upcomingPaymentDate]?.[0]?.name || 'Неизвестный пользователь';
+  const userForUpcomingPayment = userDates[upcomingPaymentDate]?.[0]?.name || 'Нет платежей';
   const userPayment = userDates[upcomingPaymentDate]?.[0]?.payment;
+
 
 
 
@@ -406,10 +285,15 @@ const sendPushSms = async (phone, name, payment) => {
         <Text style={{textAlign: 'center'}}>Общая информация:</Text>
         <InfoText>Выдано кредитов: {AllCreditMath} руб.</InfoText>
         <InfoText>Всего платежей: {Allpayment} руб. </InfoText>
-        {/* <Button title='НАЖМИ' onPress={scheduleNot} /> */}
+        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+         
+       
+      </View>
+     
+    
       </InfoBox>
       <InfoBox>
-      <Text style={{textAlign: 'center'}}>Следующий платёж:</Text>
+      <Text style={{textAlign: 'center'}}>Следующий платеж:</Text>
         <InfoText style={{textAlign:'center'}}>
          {userForUpcomingPayment}
         </InfoText>
@@ -417,10 +301,11 @@ const sendPushSms = async (phone, name, payment) => {
          {upcomingPaymentDate}, {userPayment} руб.
 
         </InfoText>
+
+       
        
        
       </InfoBox>
-
       <Modal
         animationType="slide"
         transparent={true}

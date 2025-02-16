@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, Text, TextInput, Button, Share, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Alert } from 'react-native';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import RNFS from 'react-native-fs';
+import CustomButton from './CustomButton';
 
 
 
@@ -471,17 +472,43 @@ try {
 }
   
 
-if (Platform.OS === 'ios' ) {
+if (Platform.OS === 'ios') {
+  let destination = `${RNFS.DocumentDirectoryPath}/dogovor_zaima${name}.pdf`;
 
-  const destination = `${RNFS.DocumentDirectoryPath}/dogovor_zaima${name}.pdf`;
+  // Функция для генерации уникального имени файла
+  const getUniqueFileName = async (basePath, extension) => {
+    let counter = 1;
+    let uniquePath = basePath + extension;
+
+    while (await RNFS.exists(uniquePath)) {
+      uniquePath = `${basePath}_${counter}${extension}`;
+      counter++;
+    }
+
+    return uniquePath;
+  };
 
   try {
-    await RNFS.writeFile(source, destination)
-    Alert.alert('Файл перемещён в:', destination);
-  } catch {
-    Alert.alert('Error moving file:', err);
+    // Проверяем, существует ли файл с изначальным именем
+    if (await RNFS.exists(destination)) {
+      // Если существует, генерируем уникальное имя
+      destination = await getUniqueFileName(
+        `${RNFS.DocumentDirectoryPath}/dogovor_zaima${name}`,
+        '.pdf'
+      );
+    }
+
+    await RNFS.moveFile(source, destination);
+
+    await Share.share({
+      url: `file://${destination}`,
+      message: 'Ваш файл готов.',
+    });
+  } catch (err) {
+    Alert.alert('Ошибка перемещения файла:', err.message);
   }
 }
+
 
 
   };
@@ -525,10 +552,9 @@ if (Platform.OS === 'ios' ) {
 
 
           <View style={{ marginBottom: 10 }}>
-            <Button title="Сохранить договор в PDF" color="#007AFF" onPress={() => generatePDF()} />
-          </View>
-
-          <Button title="Отмена" color="#007AFF" onPress={onClose} />
+            <CustomButton title={'Сохранить договор в PDF'} onPress={() => generatePDF()} />
+            </View>
+            <CustomButton title={'Отмена'} onPress={onClose} />
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>

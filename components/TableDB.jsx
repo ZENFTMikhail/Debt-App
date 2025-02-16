@@ -3,6 +3,7 @@ import { View, Text,Image, FlatList, TouchableOpacity, Alert, ActivityIndicator,
 import styled from 'styled-components/native';
 import * as SQLite from 'expo-sqlite';
 import ImgUser from '../assets/jpg.png';
+import { useDatabase } from './DatabaseContext';
 
 
 
@@ -13,47 +14,18 @@ export const TableDB =  ({navigation}) => {
 
 const [isLoading, setIsLoading] = React.useState(true)
 const [users, setUsers] = React.useState([]);
+const {initDb} = useDatabase();
 
-const db = React.useRef(null);
 
 
-const initDb = async () => {
+  
+  const getUsers = async (db) => {
     try {
-      // Открытие базы данных
-      db.current = await SQLite.openDatabaseAsync('BD3');
-    } catch (error) {
-      console.error("Error initializing database:", error);
-    }
-  };
-
-  React.useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await initDb(); // Инициализируем базу данных
-        const usersData = await getUsers(); // Получаем пользователей
-        setUsers(usersData);
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      } finally {
-        setIsLoading(false); // Отключаем индикатор загрузки
-      }
-    };
-
-    fetchData();
-  }, []);
-
-
-
-
-  const getUsers = async () => {
-    try {
-        const result = await db.current.getAllAsync('SELECT * FROM BD3');
+        const result = await db.getAllAsync('SELECT * FROM BDuser3');
         const usersArray = [];
 
         for (const row of result) {
             usersArray.push(row);
-            
-            
         }
 
         return usersArray; // Возвращаем массив с данными
@@ -63,20 +35,34 @@ const initDb = async () => {
     }
 };
 
-const Update = async () => {
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const db = await initDb('BDuser3');
+        const usersData = await getUsers(db); // Получаем пользователей
+        setUsers(usersData);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setIsLoading(false); // Отключаем индикатор загрузки
+      }
+    };
+
+    fetchData();
+  }, [initDb]);
+
+  const Update = async () => {
     
-    const result = await db.current.getAllAsync('SELECT * FROM BD3')
-    const usersArray = [];
-
-        for (const row of result) {
-            usersArray.push(row);
-            
-            
-        }
-
+    const db = await initDb('BDuser3');
+    const usersArray = await getUsers(db);
+    
         setUsers(usersArray)
-
 }
+
+
+
+
 
 
 
@@ -115,7 +101,7 @@ padding-bottom: 10px;
 `
 
 const renderItem = React.useCallback(({ item }) => (
-    <TouchableOpacity onPress={() => navigation.navigate('FullPost', {id: item.id, name: item.name, dupt: item.dupt, payment: item.payment, procent: item.procent, phone: item.phone, datedupt: item.datedupt, datepay: item.datepay, collateral: item.collateral })}>
+    <TouchableOpacity onPress={() => navigation.navigate('FullPost', {id: item.id, name: item.name, dupt: item.dupt, payment: item.payment, procent: item.procent, procentInvest: item.procentInvest, nameInvest: item.nameInvest, phone: item.phone, datedupt: item.datedupt, datepay: item.datepay, collateral: item.collateral })}>
         <PostView>
             <PostImage source={ImgUser} resizeMode="contain" />
             <View>

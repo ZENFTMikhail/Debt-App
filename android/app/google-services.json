@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "193802341079",
+    "project_id": "dbdupt-7f8aa",
+    "storage_bucket": "dbdupt-7f8aa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:193802341079:android:e390b3c1b0090aae81be92",
+        "android_client_info": {
+          "package_name": "com.mika77712.StickerSmash"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRuBeSmKMYFl6B19bqUDMxC1Ia9imS4P0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

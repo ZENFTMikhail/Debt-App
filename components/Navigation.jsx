@@ -34,7 +34,7 @@ export const Navigation = () => {
 
     return (
         <LoadDateProvider>
-            <StatusBar barStyle="light-content" showHideTransition="fade" backgroundColor="#002366" />
+            <StatusBar barStyle='dark-content' showHideTransition="fade" />
         <NavigationContainer>
             <Stack.Navigator>
                 <Stack.Screen name='Home' component={Home} options={{ title: 'Календарь платежей'}} />

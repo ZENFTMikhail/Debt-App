@@ -4,6 +4,7 @@ import * as SQLite from 'expo-sqlite';
 import { LoadDateContext } from './LoadDateContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as Contacts from 'expo-contacts';
+import CustomButton from './CustomButton';
 
 
 
@@ -21,10 +22,16 @@ export const AddClientScreen = ({navigation}) => {
   const [phone, setPhone] = React.useState('');
   const [datedupt, setDateDupt] = React.useState('');
 
+  const [investsName, setInvestsName] = React.useState([]);
+  const [investor, setInvestor] = React.useState('');
+  const [procentInvest, setProcentInvest] = React.useState('');
+
   const [contacts, setContacts] = React.useState([]);
   const [filteredContacts, setFilteredContacts] = React.useState([]);
   const [modalVisible, setModalVisible] = React.useState(false);
+  const [ModalVisibleInvestName ,setModalVisibleInvestName] = React.useState(false);
   const [search, setSearch] = React.useState('');
+
 
 
   
@@ -116,11 +123,27 @@ export const AddClientScreen = ({navigation}) => {
       console.error('Ошибка при выборе изображений:', error);
     }
   };
+ 
+  const getInvest = async () => {
+    const db = await SQLite.openDatabaseAsync('BDInvest1');
+    const resultName = await db.getAllAsync('SELECT name, procent FROM BDInvest1');
+
+    const investors = resultName.map(row => ({
+      name: row.name,
+      procent: row.procent,
+    }));
+  
+    setInvestsName(investors);
+  }
+
+  React.useEffect(() => {
+    getInvest();
+  }, []);
 
  
 
   const addClient = async (event) => {
-    const db = await SQLite.openDatabaseAsync('BD3');
+    const db = await SQLite.openDatabaseAsync('BDuser3');
     event.persist();
   
     try {
@@ -130,13 +153,13 @@ export const AddClientScreen = ({navigation}) => {
       const collateralValue = images.join(',');  // Сохраняем изображения как строку через запятую
       
       await db.runAsync(
-        'INSERT INTO BD3 (name, dupt, payment, procent, phone, datedupt, datepay, collateral) VALUES (?,?,?,?,?,?,?,?)',
-        name, dupt, payment, procent, phone, datedupt, nextPaymentDate, collateralValue
+        'INSERT INTO BDuser3 (name, dupt, payment, procent, procentInvest, nameInvest, phone, datedupt, datepay, collateral) VALUES (?,?,?,?,?,?,?,?,?,?)',
+        name, dupt, payment, procent, procentInvest, investor, phone, datedupt, nextPaymentDate, collateralValue
       );
       await fetchData();
       await getAllCredit();
   
-      const result = await db.getAllAsync('SELECT datedupt, datepay FROM BD3');
+      const result = await db.getAllAsync('SELECT datedupt, datepay FROM BDuser3');
       if (result.length > 0) {
         const dates = result.map(row => row.datedupt);
         setLoadDate(dates);  
@@ -154,7 +177,14 @@ export const AddClientScreen = ({navigation}) => {
     <ScrollView style={styles.container}>
       <TextInput placeholder="ФИО" value={name} onChangeText={setName}  style={styles.input} />
       <TextInput placeholder="Сумма" value={dupt} onChangeText={setDupt} keyboardType='numeric' style={styles.input} />
-      <TextInput placeholder="Ставка" value={procent} onChangeText={setProcent} keyboardType='numeric' style={styles.input} />
+      <View>
+      <TextInput placeholder="Инвестор" editable={false} value={investor} style={styles.input2} />
+      <TouchableOpacity style={styles.investPush} onPress={() => setModalVisibleInvestName(true)}>
+          <Text>Выбрать:</Text>
+        </TouchableOpacity>
+      </View>
+      <TextInput placeholder="Процент инвестора" style={styles.input2} editable={false} value={procentInvest ? procentInvest.toString() : ''} keyboardType='numeric'/>
+      <TextInput placeholder="Ставка клиента" value={procent} onChangeText={setProcent} keyboardType='numeric' style={styles.input} />
       <View style={styles.inputContainer}>
         <TextInput
           placeholder="Телефон-7***"
@@ -170,11 +200,11 @@ export const AddClientScreen = ({navigation}) => {
             style={styles.icon}
           />
         </TouchableOpacity>
+       
       </View>
-      <TextInput placeholder="Дата займа (гггг-мм-дд)" value={datedupt.trim()} keyboardType='numeric' onChangeText={setDateDupt} style={styles.input} />
+      <TextInput placeholder="Дата займа (гггг-мм-дд)" value={datedupt.trim()} onChangeText={setDateDupt} style={styles.input} />
       
-      
-      <Button title="Фото залога" color="#007AFF" onPress={pickImages} />
+      <CustomButton title="Фото залога" onPress={pickImages} />
      
 
       
@@ -184,9 +214,36 @@ export const AddClientScreen = ({navigation}) => {
         ))}
       </ScrollView>
       <View style={{paddingTop: 10}}>
-      <Button title="Добавить" color="#007AFF" onPress={addClient} />
+        <CustomButton title="Добавить"  onPress={addClient} />
       </View>
       
+      <Modal
+        visible={ModalVisibleInvestName}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setModalVisibleInvestName(false)} // Закрываем модальное окно
+      >
+        <View style={styles.modalContainerInv}>
+          <View style={styles.modalContentInv}>
+          <FlatList
+            data={investsName}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.listItem}
+                onPress={() => {
+                  setInvestor(item.name); // Устанавливаем имя инвестора
+                  setProcentInvest(item.procent); // Устанавливаем процент инвестора
+                  setModalVisibleInvestName(false); // Закрываем модальное окно
+                }}
+              >
+                <Text style={styles.listItemText}>{item.name}</Text>
+              </TouchableOpacity>
+            )}
+          />
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={modalVisible}
@@ -229,6 +286,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 10,
   },
+  input2: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 10,
+    padding: 10,
+    color: 'black'
+  },
   inputContainer: {
     flexDirection: 'row', // Размещаем TextInput и кнопку в одном ряду
     alignItems: 'center',
@@ -243,17 +308,23 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     position: 'absolute',
-    left: 280 // Отступ слева от края TextInput
+    left: 350 // Отступ слева от края TextInput
   },
   icon: {
     width: 24, // Размер иконки
     height: 24,
   },
-  
+  investPush: {
+    position: 'absolute',
+    left: 313,
+    paddingTop: 11
+    
+  },
   modalContainer: {
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
+    paddingTop: 60,
   },
   searchInput: {
     height: 40,
@@ -270,5 +341,27 @@ const styles = StyleSheet.create({
   
   view: {
     paddingTop: 20
-  }
+  },
+  modalContainerInv: {
+    flex: 1,
+    justifyContent: 'center',
+    position: 'absolute',
+    top: 200,
+    left: 140
+   
+  },
+  modalContentInv: {
+    backgroundColor: 'white',
+    margin: 20,
+    borderRadius: 10,
+    padding: 16,
+  },
+  listItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#cca',
+  },
+  listItemText: {
+    fontSize: 16,
+  },
 });

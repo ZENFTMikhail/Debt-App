@@ -11,7 +11,7 @@ const GradientContainer = styled(LinearGradient).attrs({
   start: { x: 0, y: 0 },
   end: { x: 0, y: 2 },
 })`
-  padding-bottom: 6px;
+  padding-bottom: 10px;
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
@@ -19,14 +19,21 @@ const GradientContainer = styled(LinearGradient).attrs({
 
 
 
-const NavImage = styled.Text`
-padding-bottom: 3px;
-padding-left: 2px;
+const NavImageR = styled.View`
+padding-left: 22px;
+padding-top: 5px;
+
 `;
+
+const NavImageL = styled.View`
+padding-right: 25px;
+`;
+
+//top 613
 
 const SidebarContainer = styled(Animated.View)`
   position: absolute;
-  top: 451px;
+  top: 613px;   
   left: 0;
   width: 225px;
   height: 30%;
@@ -82,14 +89,14 @@ export const Navbar = () => {
     <>
       <GradientContainer>
         <TouchableOpacity onPress={toggleSidebar}>
-          <NavImage>
+          <NavImageR>
             <Image source={require('../assets/main2.png')} />
-          </NavImage>
+          </NavImageR>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => navigation.navigate('AddClient')}>
-          <NavImage style={{ paddingTop: 2 }}>
-            <Image source={require('../assets/add.png')} />
-          </NavImage>
+          <NavImageL >
+            <Image  source={require('../assets/add.png')} />
+          </NavImageL>
         </TouchableOpacity>
       </GradientContainer>
 

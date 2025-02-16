@@ -12,11 +12,11 @@ export const LoadDateProvider = ({ children }) => {
 
   
     const fetchData = async () => {
-      const db = await SQLite.openDatabaseAsync('BD3');
+      const db = await SQLite.openDatabaseAsync('BDuser3');
       
       try {
         // Извлекаем данные с датами и именами пользователей
-        const result = await db.getAllAsync('SELECT datedupt, datepay, name, payment, phone FROM BD3');
+        const result = await db.getAllAsync('SELECT datedupt, datepay, name, payment, phone FROM BDuser3');
         
         if (result.length > 0) {
           const loanDates = result.map(row => row.datedupt);
@@ -51,8 +51,8 @@ export const LoadDateProvider = ({ children }) => {
   
     const getAllCredit = async () => {
       try {
-        const db = await SQLite.openDatabaseAsync('BD3');
-        const result = await db.getAllAsync('SELECT dupt, payment FROM BD3');
+        const db = await SQLite.openDatabaseAsync('BDuser3');
+        const result = await db.getAllAsync('SELECT dupt, payment FROM BDuser3');
         
         
 

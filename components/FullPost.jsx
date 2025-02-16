@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AgreementDate } from './AgreementDate';
 import { LoadDateContext } from './LoadDateContext';
+import CustomButton from './CustomButton';
 
 
 
@@ -17,7 +18,7 @@ import { LoadDateContext } from './LoadDateContext';
 
 
 export const FullPost = ({ route }) => {
-  const { id, name, dupt, payment, procent, phone, datedupt, datepay, collateral } = route.params;
+  const { id, name, dupt, payment, procent, procentInvest, nameInvest, phone, datedupt, datepay, collateral } = route.params;
   const navigation = useNavigation();
   const {getAllCredit, fetchData} = useContext(LoadDateContext);
 
@@ -32,26 +33,62 @@ export const FullPost = ({ route }) => {
   const [paymentDate, setPaymentDate] = React.useState('');
   const [newDupt, setNewDupt] = React.useState(dupt);
   const [newPayment, setNewPayment] = React.useState(payment);
+  const [paymentInvest, setPaymentInvest] = React.useState('');
+  const [mycash, setMyCash] = React.useState('');
 
 
-  const calculateNextPaymentDate = (startDate) => {
-    const date = new Date(startDate);
-    const day = date.getDate();
-    date.setMonth(date.getMonth() + 1);
-    if (date.getDate() !== day) {
-      date.setDate(0);  
-    }
-    return date.toISOString().split('T')[0];  
-  };
+
+
+  React.useEffect(() => {
+    
+    const payInv = (dupt / 100) * procentInvest;
+    setPaymentInvest(payInv);
+    const myprocent = procent - procentInvest;
+
+    const cash = (dupt / 100) * myprocent;
+    setMyCash(cash);
+
+
+  },[])
+
+  const formatDateToYYYYMMDD = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0'); // Добавляем ведущий ноль
+    const day = String(date.getDate()).padStart(2, '0'); // Добавляем ведущий ноль
+    return `${year}-${month}-${day}`;
+};
+  
+
+const calculateNextPaymentDate = (startDate) => {
+  const date = new Date(startDate);
+  const day = date.getDate();
+
+  // Увеличиваем месяц
+  date.setMonth(date.getMonth() + 1);
+
+  // Если день изменился из-за перехода месяца, корректируем на последний день месяца
+  if (date.getDate() !== day) {
+      date.setDate(0);
+  }
+
+  // Форматируем дату в локальном формате
+  return formatDateToYYYYMMDD(date);
+};
 
   const recalculation = async (pay) => {
-    const db = await SQLite.openDatabaseAsync('BD3');
+    const db = await SQLite.openDatabaseAsync('BDuser3');
+    const investDb = await SQLite.openDatabaseAsync('BDInvest1');
     const today = new Date();
-    const todayDateStr = today.toISOString().split('T')[0];
-    console.log(todayDateStr);
+    today.setHours(0, 0, 0, 0); // Устанавливаем время на начало дня
+    const todayDateStr = formatDateToYYYYMMDD(today)
 
+
+    
     const startDate = new Date(datedupt);
-    const days = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)); // Сколько дней прошло
+    startDate.setHours(0, 0, 0, 0); // Устанавливаем время на начало дня
+    
+    // Вычисляем количество дней
+    const days = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24));
     console.log('Days since last payment:', days);
 
     pay = parseFloat(pay);
@@ -83,31 +120,57 @@ export const FullPost = ({ route }) => {
     console.log('Total debt with interest:', totalWithInterest);
 
     // Учитываем оплату и рассчитываем оставшийся долг
-    const remainingDebt = totalWithInterest - pay;
+    let remainingDebt = totalWithInterest - pay;
     console.log('Remaining debt after payment:', remainingDebt);
 
-    // Рассчитываем новый платёж на основе оставшегося долга
-    const newPaymentCalc = (remainingDebt * procent) / 100; // Новый ежемесячный платёж
-    const roundedRemainingDebt = Math.round(remainingDebt);
-    const roundedNewPayment = Math.round(newPaymentCalc);
 
+   
     // Рассчитываем следующую дату платежа
     const nextPaymentDate = calculateNextPaymentDate(todayDateStr);
 
+    if (nameInvest !== '') {
+    const diferenceProcentInvest = procentInvest / daysIsMonth; // процент в день инвестора
+    const diferenceProcentClient = procent / daysIsMonth;  // процент в день клиента 
+
+    const readyProcentSumInvest = ((diferenceProcentInvest * days) * dupt) / 100; // сумма набежавших процентов за кол дней инвест
+    const readyProcentSumIvan = ((diferenceProcentClient * days) * dupt) /100;  // сумма набежавших прцоентов за кол дней клиент
+
+    const togeverDuptWithProcent = dupt + readyProcentSumInvest;  // основной долг + проценты инвестора 
+
+    const cashIvan = (readyProcentSumIvan + dupt) - togeverDuptWithProcent;  // деньги заработанные 
+   
+    const newDupt = togeverDuptWithProcent - pay + cashIvan; 
+    const newPayment = (newDupt * procentInvest) / 100;
+
+
+    try { 
+
+      await investDb.runAsync(
+        'UPDATE BDInvest1 SET dupt = ?, payment = ?, datedupt = ?, datepay = ? WHERE name = ?',
+        [Math.round(newDupt), Math.round(newPayment), todayDateStr, nextPaymentDate, nameInvest ]
+
+      )
+
+      alert(`Ваш доход составил ${Math.round(cashIvan)} руб.`)
+      
+    } catch (error) {
+      console.log('Ошибка при обновлении данных инвестора')
+    }
+    }
+
+
+
+
+    const roundedRemainingDebt = Math.round(remainingDebt);
+    const newPaymentCalc = (roundedRemainingDebt * procent) / 100; // Новый ежемесячный платёж
+    const roundedNewPayment = Math.round(newPaymentCalc);
+    
     try {
         // Обновляем данные в базе
         await db.runAsync(
-            'UPDATE BD3 SET dupt = ?, payment = ?, datedupt = ?, datepay = ? WHERE id = ?',
+            'UPDATE BDuser3 SET dupt = ?, payment = ?, datedupt = ?, datepay = ? WHERE id = ?',
             [roundedRemainingDebt, roundedNewPayment, todayDateStr, nextPaymentDate, id]
         );
-        console.log(
-            'Обновленные значения:',
-            roundedRemainingDebt,
-            roundedNewPayment,
-            todayDateStr,
-            nextPaymentDate
-        );
-
         // Обновление данных и возврат на предыдущий экран
         await fetchData();
         await getAllCredit();
@@ -121,8 +184,8 @@ export const FullPost = ({ route }) => {
 
   const deleteUser = async () => {
     try {
-        const db = await SQLite.openDatabaseAsync('BD3');
-      const result = await db.getAllAsync('DELETE FROM BD3 WHERE id = ?', [id]);
+        const db = await SQLite.openDatabaseAsync('BDuser3');
+      const result = await db.getAllAsync('DELETE FROM BDuser3 WHERE id = ?', [id]);
       await fetchData();
       await getAllCredit();
 
@@ -135,24 +198,20 @@ export const FullPost = ({ route }) => {
     }
   };
 
-
-
-
   const imageUris = collateral ? collateral.split(',') : [];
 
-  
- 
- 
-
-  
 
   return (
     <GradientContainer>
       <ContentContainer>
         <StyledText>ФИО: {name}</StyledText>
         <StyledText>Сумма: {dupt}</StyledText>
-        <StyledText>Платёж: {newPayment}</StyledText>
-        <StyledText>Ставка: {procent}%</StyledText>
+        <StyledText>Платеж: {newPayment}</StyledText>
+        <StyledText>Инвестор: {nameInvest} </StyledText>
+        <StyledText>Платеж инвестору: {Math.round(paymentInvest)}</StyledText>
+        <StyledText>Мои средства: {Math.round(mycash)} </StyledText>
+        <StyledText>Ставка клиента: {procent}%</StyledText>
+        <StyledText>Ставка инвестора: {procentInvest}%</StyledText>
         <StyledText>Телефон: {phone}</StyledText>
         <StyledText>Дата займа: {datedupt}</StyledText>
         <StyledText>Дата платежа: {datepay}</StyledText>
@@ -162,14 +221,16 @@ export const FullPost = ({ route }) => {
           ))}
           
         </ScrollView>
+        
         <View style={{paddingBottom: 2, paddingTop: 5}}>
-        <Button title="Внести платёж" color="#007AFF" onPress={() => setModalVisible(true)} />
+        <CustomButton title={'Внести платеж'} onPress={() => setModalVisible(true)}></CustomButton>
+        
          </View>   
         <View  style={{paddingBottom: 2, paddingTop: 10}}>
-      <Button title="Внести данные в договор" color="#007AFF"  onPress={() => setModalVisibleagreement(true)}/>
+        <CustomButton title={'Внести данные в договор'} onPress={() => setModalVisibleagreement(true)}></CustomButton>
       </View>
       <View  style={{paddingBottom: 5, paddingTop: 10}}>
-      <Button title="Удалить пользователя" color="#007AFF" onPress={() => setDeleteuserV(true)} />
+      <CustomButton title={'Удалить пользователя'} onPress={() => setDeleteuserV(true)}></CustomButton>
       </View>
 
            {/* Модальное окно удаления пользователя */}
@@ -182,10 +243,11 @@ export const FullPost = ({ route }) => {
       
          <View style={styles.buttonContainer}>
           <View style={styles.buttonWrapper}>
-          <Button title='Да' color="#FF0000" onPress={deleteUser} />
+            <CustomButton title={'Да'} onPress={deleteUser}></CustomButton>
+          
           </View>
            <View style={styles.buttonWrapper}>
-            <Button title='Нет' color="#007AFF" onPress={() => setDeleteuserV(false)} />
+            <CustomButton title={'Нет'} onPress={() => setDeleteuserV(false)} ></CustomButton>
               </View>
              </View>
            </View>
@@ -200,7 +262,7 @@ export const FullPost = ({ route }) => {
         procent={procent}
         dupt={dupt}
         datedupt={datedupt}
-      />
+        />
 
         {/* Модальное окно для перерасчета */}
         <Modal visible={isModalVisible} transparent={true}>
@@ -216,9 +278,9 @@ export const FullPost = ({ route }) => {
         />
       
        <View style={{paddingBottom: 5}}>
-        <Button title="Рассчитать" color="#007AFF" onPress={() => recalculation(pay)} />
+        <CustomButton title={'Рассчитать'} onPress={() => recalculation(pay)}></CustomButton>
         </View>
-      <Button title=" Отмена " color="#007AFF" onPress={() => setModalVisible(false)} />
+        <CustomButton title={'Отмена'} onPress={() => setModalVisible(false)} ></CustomButton>
     </View>
     
     </View>
@@ -282,8 +344,9 @@ const ContentContainer = styled.View`
 `;
 
 const StyledText = styled.Text`
-    font-size: 17px;
+    font-size: 16px;
     color: #333;
-    margin-bottom: 10px;
-
+    margin-bottom: 2px;
+    margin-left: 7px;
 `;
+

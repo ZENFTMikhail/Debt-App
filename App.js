@@ -3,33 +3,13 @@ import { Navigation } from "./components/Navigation";
 import { registerRootComponent } from 'expo';
 import * as SQLite from 'expo-sqlite';
 import React from 'react';
+import { DatabaseProvider } from "./components/DatabaseContext";
 
 
 
 registerRootComponent(App);
 
-const initDataSms = async () => {
-  const db = await SQLite.openDatabaseAsync('dataSMS');
 
-  try {
-
-    await db.execAsync(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS dataSMS (
-      id INTEGER PRIMARY KEY NOT NULL,
-      status TEXT NOT NULL,
-      name TEXT NOT NULL,
-      date INTEGER 
-      );
-      `);
-      console.log('База для sms создана')
-    
-  } catch (error) {
-    console.log('Ошибка при создании базы', error);
-    
-  }
-
-}
 
 const initDateBaseNote = async () => {
   const db = await SQLite.openDatabaseAsync('Note')
@@ -76,16 +56,18 @@ const initDbInvest = async () => {
 };
 
 const initDb = async () => {
-  const db = await SQLite.openDatabaseAsync('BD3');
+  const db = await SQLite.openDatabaseAsync('BDuser3');
   
   try {
     await db.execAsync(`
       PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS BD3 (
+      CREATE TABLE IF NOT EXISTS BDuser3 (
         id INTEGER PRIMARY KEY NOT NULL, 
         name TEXT NOT NULL, 
         dupt INTEGER, 
         payment INTEGER, 
+        procentInvest INTEGER,
+        nameInvest INTEGER,
         procent INTEGER, 
         phone INTEGER, 
         datedupt INTEGER, 
@@ -94,7 +76,7 @@ const initDb = async () => {
       );
     `);
 
-    console.log('Created BD3 (if not exists)');
+    console.log('Created BDuser3 (if not exists)');
     
   } catch (error) {
     console.log(error);
@@ -104,7 +86,7 @@ const initDb = async () => {
 initDb();
 initDbInvest();
 initDateBaseNote();
-initDataSms();
+
 
 
 
@@ -115,7 +97,11 @@ initDataSms();
 export default function App() {
 
 
-  return <Navigation />
+  return <>
+  <DatabaseProvider>
+  <Navigation />
+  </DatabaseProvider>
+  </>
 
 
 }

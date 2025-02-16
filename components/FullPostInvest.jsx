@@ -4,6 +4,7 @@ import styled from 'styled-components/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { View, Button, Modal, StyleSheet, Text, TextInput } from 'react-native';
 import * as SQLite from 'expo-sqlite';
+import CustomButton from './CustomButton';
 
 
 
@@ -30,23 +31,41 @@ export const FullPostInvest = ({route}) => {
         }
     }
 
-    const calculateNextPaymentDate = (startDate) => {
-        const date = new Date(startDate);
-        const day = date.getDate();
-        date.setMonth(date.getMonth() + 1);
-        if (date.getDate() !== day) {
-          date.setDate(0);  
-        }
-        return date.toISOString().split('T')[0];  
-      };
+    const formatDateToYYYYMMDD = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0'); // Добавляем ведущий ноль
+      const day = String(date.getDate()).padStart(2, '0'); // Добавляем ведущий ноль
+      return `${year}-${month}-${day}`;
+  };
+    
+
+  const calculateNextPaymentDate = (startDate) => {
+    const date = new Date(startDate);
+    const day = date.getDate();
+
+    // Увеличиваем месяц
+    date.setMonth(date.getMonth() + 1);
+
+    // Если день изменился из-за перехода месяца, корректируем на последний день месяца
+    if (date.getDate() !== day) {
+        date.setDate(0);
+    }
+
+    // Форматируем дату в локальном формате
+    return formatDateToYYYYMMDD(date);
+};
 
     const recalculation = async (pay) => {
         const db = await SQLite.openDatabaseAsync('BDInvest1');
         const today = new Date();
-        const todayDateStr = today.toISOString().split('T')[0];
+        today.setHours(0,0,0,0);
+        const todayDateStr = formatDateToYYYYMMDD(today);
+       
+       
        
     
         const startDate = new Date(datedupt);
+        startDate.setHours(0,0,0,0);
         const days = Math.ceil((today - startDate) / (1000 * 60 * 60 * 24)); // Сколько дней прошло
         
     
@@ -119,10 +138,10 @@ export const FullPostInvest = ({route}) => {
         <StyledText>Дата займа: {datedupt}</StyledText>
         <StyledText>Дата платежа: {datepay}</StyledText>
         <View style={{paddingBottom: 10}}>
-        <Button title='Внести платёж' color="#007AFF" onPress={() => setModalVisible(true)} />
+          <CustomButton title='Внести платеж' onPress={() => setModalVisible(true)} />
         </View>
         <View>
-        <Button title='Удалить инвестора' color="#007AFF" onPress={() => setDeleteuserV(true)}  />
+          <CustomButton title='Удалить инвестора' onPress={() => setDeleteuserV(true)} />
         </View>   
 
         </ContentContainer>
@@ -138,10 +157,10 @@ export const FullPostInvest = ({route}) => {
 
         <View style={styles.buttonContainer}>
         <View style={styles.buttonWrapper}>
-        <Button title='Да' color="#FF0000" onPress={deleteInvestor} />
+          <CustomButton title='Да' onPress={deleteInvestor} />
         </View>
             <View style={styles.buttonWrapper}>
-            <Button title='Нет' color="#007AFF" onPress={() => setDeleteuserV(false)} />
+              <CustomButton title='Нет' onPress={() => setDeleteuserV(false)} />
             </View>
             </View>
             </View>
@@ -162,9 +181,9 @@ export const FullPostInvest = ({route}) => {
         />
       
        <View style={{paddingBottom: 5}}>
-        <Button title="Рассчитать" color="#007AFF" onPress={() => recalculation(pay)} />
+        <CustomButton title="Рассчитать" onPress={() => recalculation(pay)}  ></CustomButton>
         </View>
-      <Button title=" Отмена " color="#007AFF" onPress={() => setModalVisible(false)} />
+        <CustomButton title=" Отмена " onPress={() => setModalVisible(false)} ></CustomButton>
          </View>
     
         </View>

@@ -1,8 +1,10 @@
 import * as SQLite from 'expo-sqlite';
 import React, { useContext } from 'react'
-import { View, Text, Button, Modal, StyleSheet, TextInput, Image,  TouchableOpacity, FlatList } from 'react-native'
+import { View, Text, Button, Modal, StyleSheet, TextInput, Image,  TouchableOpacity, FlatList, RefreshControl} from 'react-native'
 import styled from 'styled-components/native';
 import ImgUser from '../assets/investimg.png';
+import CustomButton from './CustomButton';
+import { useDatabase } from './DatabaseContext';
 
 const Allpost = styled.View`
 padding: 5px;
@@ -51,7 +53,8 @@ const PaymentText = styled.Text`
 
 
 const ButtonBox = styled.View`
-padding: 5px
+padding: 5px;
+padding-left: 70px;
 `;
 
 
@@ -60,7 +63,7 @@ const AddInvest = styled.View``
 
 const CloseImg = styled.TouchableOpacity`
 position: 'absolute';
-bottom: 293px;
+bottom: 250px;
 left: 110px;
 `;
 const PostFullName = styled.Text`
@@ -110,12 +113,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 10,
     alignItems: 'center',
-    height: 330
+    height: 300
   },
   input: {
     borderWidth: 1,
     borderColor: 'gray',
-
+    borderRadius: 10,
     width: '100%',
     padding: 5,
     marginVertical: 10,
@@ -137,7 +140,10 @@ const styles = StyleSheet.create({
 
 export const Investors = ({navigation}) => {
 
+  const { initDb } = useDatabase();
   const { DateTime } = require("luxon");
+  const [isLoading, setIsLoading] = React.useState(true)
+  
   
 
   const [alldupt, setAllDupt] = React.useState('');
@@ -160,41 +166,59 @@ export const Investors = ({navigation}) => {
   const today = novosibirskTime.toISODate();
   const now = novosibirskTime.toLocaleString(DateTime.TIME_24_SIMPLE);
 
-  const db = React.useRef(null);
 
-  const initDb = async () => {
-    try {
-        if (!db.current) {
-            // Открытие базы данных, если она ещё не инициализирована
-            db.current = await SQLite.openDatabaseAsync('BDInvest1');
-            console.log("Database initialized successfully");
-        }
-    } catch (error) {
-        console.error("Error initializing database:", error);
-    }
+
+
+
+const getInvest = async (db) => {
+
+
+  try {
+      const result = await db.getAllAsync('SELECT * FROM BDInvest1');
+      const usersArray = [];
+
+      for (const row of result) {
+          usersArray.push(row);
+      }
+
+      const alldupt = usersArray.map(row => row.dupt);
+      const sumDupt = alldupt.reduce((acc, row) => acc + row, 0);
+      const sortedUsers = usersArray.sort((a, b) => new Date(a.datepay) - new Date(b.datepay));
+      const userForUpcomingPayment = sortedUsers[0]?.name || 'Неизвестный пользователь';
+      const paymentUser = sortedUsers[0]?.payment;
+      const paymentDates = sortedUsers[0]?.datepay || null;
+
+      setTodayPayment(paymentUser);
+      setDatePay(paymentDates);
+      setAllDupt(sumDupt);
+      setPaymentUser(userForUpcomingPayment);
+
+      const allpayment = usersArray.map(row => row.payment);
+      const sumpayment = allpayment.reduce((acc, row) => acc + row, 0);
+      setAllPayment(sumpayment);
+
+      return usersArray;
+  } catch (error) {
+      console.error("Error getting users:", error);
+      throw error;
+  }
 };
 
 React.useEffect(() => {
   const fetchData = async () => {
     try {
-        await initDb(); // Убедиться, что база данных инициализирована
-        const usersData = await getInvest();
+        const db = await initDb('BDInvest1', { useNewConnection: true});
+        const usersData = await getInvest(db);
         setInvest(usersData);
     } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching investors:", error);
+    } finally {
+      setIsLoading(false); // Отключаем индикатор загрузки
     }
-  };
-  fetchData();
-  // Очистка ресурса при размонтировании компонента
-  return () => {
-      if (db.current) {
-          db.current.closeAsync().catch(err => console.error("Error closing database:", err));
-          db.current = null; // Сброс ссылки после закрытия
-      }
-  };
+};
 
-
-}, []);
+fetchData();
+}, [initDb]);
 
   const calculatePayment = (dupt, procent) => {
     const payment = (dupt * procent) / 100;  
@@ -239,49 +263,14 @@ React.useEffect(() => {
 
   }
 
-  const getInvest = async () => {
-    if (!db.current) {
-        console.error('Database connection is not initialized');
-        await initDb(); // Переоткрываем базу данных
-    }
+  const Update = async () => {
+    const db = await initDb('BDInvest1');
+    const investUser = await getInvest(db);
 
-    try {
-        const result = await db.current.getAllAsync('SELECT * FROM BDInvest1');
-        const usersArray = [];
-
-        for (const row of result) {
-            usersArray.push(row);
-        }
-
-        const alldupt = usersArray.map(row => row.dupt);
-        const sumDupt = alldupt.reduce((acc, row) => acc + row, 0);
-        const sortedUsers = usersArray.sort((a, b) => new Date(a.datepay) - new Date(b.datepay));
-        const userForUpcomingPayment = sortedUsers[0]?.name || 'Неизвестный пользователь';
-        const paymentUser = sortedUsers[0]?.payment;
-        const paymentDates = sortedUsers[0]?.datepay || null;
-
-        setTodayPayment(paymentUser);
-        setDatePay(paymentDates);
-        setAllDupt(sumDupt);
-        setPaymentUser(userForUpcomingPayment);
-
-        const allpayment = usersArray.map(row => row.payment);
-        const sumpayment = allpayment.reduce((acc, row) => acc + row, 0);
-        setAllPayment(sumpayment);
-
-        return usersArray;
-    } catch (error) {
-        console.error("Error getting users:", error);
-        throw error;
-    }
-};
+    setInvest(investUser);
+  }
 
 
-
-
-// console.log(paymentUser)
-// console.log(datepay)
-// console.log(todayPayment)
 
 
 
@@ -311,7 +300,8 @@ const renderItem = React.useCallback(({ item }) => (
             keyExtractor={(item) => item.id.toString()}
             getItemLayout={(data, index) => (
                 {length: 100, offset: 100 * index, index} 
-          )}/>
+                 )}  refreshControl={<RefreshControl refreshing={isLoading} onRefresh={Update} />}
+          />
          
 
         <Modal visible={modalOpen}
@@ -345,11 +335,10 @@ const renderItem = React.useCallback(({ item }) => (
 
             <TextInput 
             style={styles.input} 
-            placeholder='Дата займа'
-            keyboardType='numeric'
+            placeholder='Дата займа(rrrr-мм-дд)'
             value={datedupt}
             onChangeText={setDateDupt} />
-            <Button title='Добавить' color="#007AFF" onPress={addInvestors} />
+            <CustomButton title='Добавить' style={{width: '90%'}} onPress={addInvestors} />
 
             <CloseImg onPress={() => setModalOpen(false)} > 
               <Image source={require('../assets/close.png')} style={{width: 14, height: 14}} />
@@ -386,7 +375,7 @@ const renderItem = React.useCallback(({ item }) => (
     </InfoBox>
 
     <ButtonBox>
-    <Button title='Добавить инвестора' color="#007AFF" onPress={() => setModalOpen(true)} />
+      <CustomButton title='Добавить инвестора' style={{width: '80%' }} onPress={() => setModalOpen(true)} />
     </ButtonBox>
    
 
