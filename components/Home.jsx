@@ -126,61 +126,61 @@ export const Home = () => {
   const now = novosibirskTime.toLocaleString(DateTime.TIME_24_SIMPLE);
 
 
-  React.useEffect(() => {
+  // React.useEffect(() => {
 
-    setTimeout(() => { const allData = async () => {
-      const db = await SQLite.openDatabaseAsync('BDuser3');
-      const result = await db.getAllAsync('SELECT name, datepay, phone, payment FROM BDuser3');
+  //   setTimeout(() => { const allData = async () => {
+  //     const db = await SQLite.openDatabaseAsync('BDuser3');
+  //     const result = await db.getAllAsync('SELECT name, datepay, phone, payment FROM BDuser3');
   
-      if (result.length > 0) {
-        try {
-          const response = await fetch('https://db-dupt-f3417235da6c.herokuapp.com/api/save-users', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ users: result }),
-          });
+  //     if (result.length > 0) {
+  //       try {
+  //         const response = await fetch('https://db-dupt-f3417235da6c.herokuapp.com/api/save-users', {
+  //           method: 'POST',
+  //           headers: {
+  //             'Content-Type': 'application/json',
+  //           },
+  //           body: JSON.stringify({ users: result }),
+  //         });
   
-          const data = await JSON.parse(JSON.stringify(response));
-          console.log('Отправлено на сервер BDuser3', data);
-        } catch (error) {
-          console.log('Ошибка отправки данных', error);
-        }
-      }
-    };
+  //         const data = await JSON.parse(JSON.stringify(response));
+  //         console.log('Отправлено на сервер BDuser3', data);
+  //       } catch (error) {
+  //         console.log('Ошибка отправки данных', error);
+  //       }
+  //     }
+  //   };
   
-    allData();}, 9000)
+  //   allData();}, 9000)
    
-  }, []);
+  // }, []);
 
-  React.useEffect(() => {
+  // React.useEffect(() => {
 
-    setTimeout(() => {const allDataInvest = async () => {
-      const db = await SQLite.openDatabaseAsync('BDInvest1');
-      const result = await db.getAllAsync('SELECT name, datepay, payment FROM BDInvest1');
+  //   setTimeout(() => {const allDataInvest = async () => {
+  //     const db = await SQLite.openDatabaseAsync('BDInvest1');
+  //     const result = await db.getAllAsync('SELECT name, datepay, payment FROM BDInvest1');
   
-      if (result.length > 0) {
-        try {
-          const response = await fetch('https://db-dupt-f3417235da6c.herokuapp.com/api/save-invest', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ invest: result }),
-          });
+  //     if (result.length > 0) {
+  //       try {
+  //         const response = await fetch('https://db-dupt-f3417235da6c.herokuapp.com/api/save-invest', {
+  //           method: 'POST',
+  //           headers: {
+  //             'Content-Type': 'application/json',
+  //           },
+  //           body: JSON.stringify({ invest: result }),
+  //         });
   
-          const data = await JSON.parse(JSON.stringify(response));
-          console.log('Отправлено на сервер', data);
-        } catch (error) {
-          console.log('Ошибка отправки данных BDinvest', error);
-        }
-      }
-    };
+  //         const data = await JSON.parse(JSON.stringify(response));
+  //         console.log('Отправлено на сервер', data);
+  //       } catch (error) {
+  //         console.log('Ошибка отправки данных BDinvest', error);
+  //       }
+  //     }
+  //   };
   
-    allDataInvest();}, 8000)
+  //   allDataInvest();}, 8000)
     
-  }, []);
+  // }, []);
 
   
 React.useEffect(() => {

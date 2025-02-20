@@ -1,6 +1,8 @@
-![main](assets/screenmain.jpg)
+![main](assets/1.png)
 ![tableDB](assets/screentablebd.jpg)
-![infoclient](assets/screenclient.jpg)
+![tableinvest2](assets/2.png)
+![infoclient](assets/3.png)
+![notes](assets/4.png)
 
 # How to Run the Application
 

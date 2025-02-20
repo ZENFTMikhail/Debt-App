@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TextInput, Button, StyleSheet, ScrollView, Image, Text, TouchableOpacity, Modal, FlatList  } from 'react-native';
+import { View, TextInput, Button, StyleSheet, ScrollView, Image, Text, TouchableOpacity, TouchableWithoutFeedback, Modal, FlatList, Keyboard  } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import { LoadDateContext } from './LoadDateContext';
 import * as ImagePicker from 'expo-image-picker';
@@ -48,6 +48,31 @@ export const AddClientScreen = ({navigation}) => {
   };
 
 
+  const fetchContacts = async () => {
+    try {
+      const { status } = await Contacts.requestPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Разрешение на доступ к контактам не предоставлено');
+        return;
+      }
+  
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers],
+      });
+  
+      if (!data || data.length === 0) {
+        console.log('Контакты не найдены');
+        setContacts([]);
+        setFilteredContacts([]);
+        return;
+      }
+  
+      setContacts(data);
+      setFilteredContacts(data);
+    } catch (error) {
+      console.error('Ошибка при получении контактов:', error);
+    }
+  };
 
 
   React.useEffect(() => {
@@ -56,33 +81,29 @@ export const AddClientScreen = ({navigation}) => {
     }
   }, [modalVisible]);
 
-  const fetchContacts = async () => {
-    const { status } = await Contacts.requestPermissionsAsync();
-    if (status === 'granted') {
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.PhoneNumbers],
-      });
-      setContacts(data);
-      setFilteredContacts(data); // По умолчанию показываем все контакты
-    }
-  };
-
+  
 
   const handleSearch = (text) => {
     setSearch(text);
-    const filtered = contacts.filter(contact => {
-      const contactName = contact.name.toLowerCase();
+  
+    if (!contacts || contacts.length === 0) {
+      return;
+    }
+  
+    const filtered = contacts.filter((contact) => {
+      const contactName = contact.name ? contact.name.toLowerCase() : '';
       return contactName.includes(text.toLowerCase());
     });
+  
     setFilteredContacts(filtered);
   };
 
   const handleContactSelect = (contact) => {
     if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-      const formattedPhone = formatPhoneNumber(contact.phoneNumbers[0].number)
-      setPhone(formattedPhone); // Берем первый номер
+      const formattedPhone = formatPhoneNumber(contact.phoneNumbers[0].number);
+      setPhone(formattedPhone);
     }
-    setModalVisible(false); // Закрываем модальное окно после выбора контакта
+    setModalVisible(false);
   };
 
 
@@ -123,14 +144,16 @@ export const AddClientScreen = ({navigation}) => {
       console.error('Ошибка при выборе изображений:', error);
     }
   };
+  
  
   const getInvest = async () => {
     const db = await SQLite.openDatabaseAsync('BDInvest1');
-    const resultName = await db.getAllAsync('SELECT name, procent FROM BDInvest1');
+    const resultName = await db.getAllAsync('SELECT name, procent, datedupt FROM BDInvest1');
 
     const investors = resultName.map(row => ({
       name: row.name,
       procent: row.procent,
+      datedupt: row.datedupt
     }));
   
     setInvestsName(investors);
@@ -187,7 +210,7 @@ export const AddClientScreen = ({navigation}) => {
       <TextInput placeholder="Ставка клиента" value={procent} onChangeText={setProcent} keyboardType='numeric' style={styles.input} />
       <View style={styles.inputContainer}>
         <TextInput
-          placeholder="Телефон-7***"
+          placeholder="Телефон-7(***)*******"
           value={phone}
           onChangeText={setPhone}
           keyboardType='numeric'
@@ -234,6 +257,7 @@ export const AddClientScreen = ({navigation}) => {
                 onPress={() => {
                   setInvestor(item.name); // Устанавливаем имя инвестора
                   setProcentInvest(item.procent); // Устанавливаем процент инвестора
+                  setDateDupt(item.datedupt);
                   setModalVisibleInvestName(false); // Закрываем модальное окно
                 }}
               >
@@ -250,24 +274,26 @@ export const AddClientScreen = ({navigation}) => {
         animationType="slide"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={styles.modalContainer}>
-          <TextInput
-            placeholder="Поиск контакта"
-            value={search}
-            onChangeText={handleSearch}
-            style={styles.searchInput}
-          />
-          <FlatList
-            data={filteredContacts}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.contactItem} onPress={() => handleContactSelect(item)}>
-                <Text>{item.name}</Text>
-              </TouchableOpacity>
-            )}
-          />
-          <Button title="Закрыть" onPress={() => setModalVisible(false)} />
-        </View>
+       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View style={styles.modalContainer}>
+        <TextInput
+          placeholder="Поиск контакта"
+          value={search}
+          onChangeText={handleSearch}
+          style={styles.searchInput}
+        />
+        <FlatList
+          data={filteredContacts}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity style={styles.contactItem} onPress={() => handleContactSelect(item)}>
+              <Text>{item.name}</Text>
+            </TouchableOpacity>
+          )}
+        />
+        <Button title="Закрыть" onPress={() => setModalVisible(false)} />
+      </View>
+    </TouchableWithoutFeedback>
       </Modal>
     </ScrollView>
   ); 
@@ -301,18 +327,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     height: 40,
     marginBottom: 10,
-    paddingLeft: 7
+    paddingLeft: 7,
 
  
    
   },
   iconContainer: {
     position: 'absolute',
-    left: 350 // Отступ слева от края TextInput
+    left: 350,
+    
+    backgroundColor: 'black'
   },
   icon: {
     width: 24, // Размер иконки
     height: 24,
+  
   },
   investPush: {
     position: 'absolute',
@@ -347,7 +376,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'absolute',
     top: 200,
-    left: 140
+    paddingLeft: 200
+    
    
   },
   modalContentInv: {

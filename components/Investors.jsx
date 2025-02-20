@@ -329,7 +329,6 @@ const renderItem = React.useCallback(({ item }) => (
             <TextInput 
             style={styles.input}
             placeholder='Ставка'
-            keyboardType='numeric'
             value={procent}
             onChangeText={setProcent} />
 

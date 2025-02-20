@@ -209,7 +209,7 @@ const calculateNextPaymentDate = (startDate) => {
         <StyledText>Платеж: {newPayment}</StyledText>
         <StyledText>Инвестор: {nameInvest} </StyledText>
         <StyledText>Платеж инвестору: {Math.round(paymentInvest)}</StyledText>
-        <StyledText>Мои средства: {Math.round(mycash)} </StyledText>
+        <StyledText>Прибыль: {Math.round(mycash)} </StyledText>
         <StyledText>Ставка клиента: {procent}%</StyledText>
         <StyledText>Ставка инвестора: {procentInvest}%</StyledText>
         <StyledText>Телефон: {phone}</StyledText>
